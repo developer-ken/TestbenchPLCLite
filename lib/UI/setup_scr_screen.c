@@ -534,7 +534,7 @@ void setup_scr_screen(lv_ui *ui)
 
     //Write codes screen_stath
     ui->screen_stath = lv_button_create(ui->screen_tabview_1_tab_2);
-    lv_obj_set_pos(ui->screen_stath, -11, -1);
+    lv_obj_set_pos(ui->screen_stath, -20, -1);
     lv_obj_set_size(ui->screen_stath, 1, 1);
     ui->screen_stath_label = lv_label_create(ui->screen_stath);
     lv_label_set_text(ui->screen_stath_label, "");
@@ -822,7 +822,7 @@ void setup_scr_screen(lv_ui *ui)
     lv_qrcode_set_size(ui->screen_wireless_connqr, 86);
     lv_qrcode_set_dark_color(ui->screen_wireless_connqr, lv_color_hex(0x2C3224));
     lv_qrcode_set_light_color(ui->screen_wireless_connqr, lv_color_hex(0xffffff));
-    const char * screen_wireless_connqr_data = "NOT_IMPLIMENTED_YET";
+    const char * screen_wireless_connqr_data = " ";
     lv_qrcode_update(ui->screen_wireless_connqr, screen_wireless_connqr_data, lv_strlen(screen_wireless_connqr_data));
 
     //Write codes screen_label_20

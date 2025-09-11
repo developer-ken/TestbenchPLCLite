@@ -53,7 +53,7 @@ void init_knob()
                         rotatestate = 0;
                     }
                 }
-                else if ((millis() - last_knob_update > 250))
+                else if ((millis() - last_knob_update > 150))
                 {
                     rotatestate = 0;
                 }
