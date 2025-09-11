@@ -20,6 +20,8 @@ void setup()
     dataregisterpool = (uint16_t *)malloc(sizeof(uint16_t) * 524288); // 1MB for data registers
     init_knob();
     lvsetup();
+    esp_reset_reason_t reason = esp_reset_reason();
+    Serial.printf("Reset reason: %d\n", reason);
 }
 
 void loop()

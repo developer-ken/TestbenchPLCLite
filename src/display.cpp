@@ -75,12 +75,17 @@ void lvsetup()
 
     lv_group_t *g1 = lv_group_create();
     lv_indev_set_group(knob, g1);
-    lv_group_add_obj(g1, guider_ui.screen_sw_1);
-    lv_group_add_obj(g1, guider_ui.screen_sw_2);
-    lv_group_add_obj(g1, guider_ui.screen_sw_3);
-    lv_group_add_obj(g1, guider_ui.screen_slider_1);
-    lv_group_add_obj(g1, guider_ui.screen_slider_2);
-    lv_group_add_obj(g1, guider_ui.screen_btn_1);
+    lv_group_add_obj(g1, guider_ui.screen_fileselect);
+    lv_group_add_obj(g1, guider_ui.screen_run);
+    lv_group_add_obj(g1, guider_ui.screen_stath);
+    lv_group_add_obj(g1, guider_ui.screen_nonvolatile);
+    lv_group_add_obj(g1, guider_ui.screen_autoboot);
+    lv_group_add_obj(g1, guider_ui.screen_staterecover);
+    lv_group_add_obj(g1, guider_ui.screen_wireless);
+    
+    const char* screen_wireless_connqr_data = "WIFI:T:WPA/WPA2;S:testbenchplc-2n75;P:43567834;H:true;";
+    lv_qrcode_update(guider_ui.screen_wireless_connqr, screen_wireless_connqr_data, lv_strlen(screen_wireless_connqr_data));
+
     lv_timer_handler();
     digitalWrite(PIN_TFT_BL, HIGH); // 打开背光
 }

@@ -5,7 +5,7 @@ must_exist=False
 # Get custom_ list of files to skip
 #https://docs.platformio.org/en/latest/scripting/middlewares.html
 
-custom_build_files_exclude = env.GetProjectOption("custom_build_files_exclude")
+custom_build_files_exclude = "*/Arduino_ESP32LCD8.cpp */Arduino_ESP32QSPI.cpp"
 print(" ** Custom_ skip build targets** ", custom_build_files_exclude )
 
 def skip_tgt_from_build(env, node):

@@ -25,13 +25,44 @@ typedef struct
 	lv_obj_t *screen_tabview_1_tab_1;
 	lv_obj_t *screen_tabview_1_tab_2;
 	lv_obj_t *screen_tabview_1_tab_3;
-	lv_obj_t *screen_sw_1;
-	lv_obj_t *screen_sw_2;
-	lv_obj_t *screen_sw_3;
-	lv_obj_t *screen_slider_1;
-	lv_obj_t *screen_slider_2;
-	lv_obj_t *screen_btn_1;
-	lv_obj_t *screen_btn_1_label;
+	lv_obj_t *screen_tabview_1_tab_4;
+	lv_obj_t *screen_fileselect;
+	lv_obj_t *screen_label_12;
+	lv_obj_t *screen_run;
+	lv_obj_t *screen_DI1;
+	lv_obj_t *screen_AI1;
+	lv_obj_t *screen_label_1;
+	lv_obj_t *screen_DO4;
+	lv_obj_t *screen_DI4;
+	lv_obj_t *screen_DI3;
+	lv_obj_t *screen_DI2;
+	lv_obj_t *screen_label_2;
+	lv_obj_t *screen_DO1;
+	lv_obj_t *screen_DO2;
+	lv_obj_t *screen_DO3;
+	lv_obj_t *screen_label_3;
+	lv_obj_t *screen_AI2;
+	lv_obj_t *screen_label_6;
+	lv_obj_t *screen_label_7;
+	lv_obj_t *screen_TX1;
+	lv_obj_t *screen_TX2;
+	lv_obj_t *screen_RX1;
+	lv_obj_t *screen_RX2;
+	lv_obj_t *screen_stath;
+	lv_obj_t *screen_stath_label;
+	lv_obj_t *screen_label_13;
+	lv_obj_t *screen_label_14;
+	lv_obj_t *screen_label_15;
+	lv_obj_t *screen_nonvolatile;
+	lv_obj_t *screen_label_16;
+	lv_obj_t *screen_autoboot;
+	lv_obj_t *screen_staterecover;
+	lv_obj_t *screen_label_17;
+	lv_obj_t *screen_label_18;
+	lv_obj_t *screen_wireless_connqr;
+	lv_obj_t *screen_label_20;
+	lv_obj_t *screen_label_19;
+	lv_obj_t *screen_wireless;
 }lv_ui;
 
 typedef void (*ui_setup_scr_t)(lv_ui * ui);
@@ -63,8 +94,11 @@ void setup_scr_screen(lv_ui *ui);
 
 LV_FONT_DECLARE(lv_font_SourceHanSansCNBold2_15)
 LV_FONT_DECLARE(lv_font_SourceHanSansCNBold2_18)
-LV_FONT_DECLARE(lv_font_montserratMedium_16)
+LV_FONT_DECLARE(lv_font_montserratMedium_10)
 LV_FONT_DECLARE(lv_font_montserratMedium_12)
+LV_FONT_DECLARE(lv_font_montserratMedium_15)
+LV_FONT_DECLARE(lv_font_montserratMedium_16)
+LV_FONT_DECLARE(lv_font_SourceHanSansCNBold2_10)
 
 
 #ifdef __cplusplus
