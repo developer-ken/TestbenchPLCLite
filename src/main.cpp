@@ -5,6 +5,8 @@
 #include "display.h"
 #include "knob.h"
 
+uint16_t *dataregisterpool;
+
 void setup()
 {
     pinMode(PIN_BEEP, OUTPUT);
@@ -15,7 +17,7 @@ void setup()
     analogWrite(PIN_BEEP, 0); // Off
     analogWriteFrequency(PIN_BEEP, 4000);
     Serial.begin(115200);
-
+    dataregisterpool = (uint16_t *)malloc(sizeof(uint16_t) * 524288); // 1MB for data registers
     init_knob();
     lvsetup();
 }
