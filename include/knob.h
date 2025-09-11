@@ -4,6 +4,6 @@
 #include <Arduino.h>
 
 void init_knob();
-extern float_t knobdelta;
+extern int16_t knobdelta;
 
 #endif

@@ -27,8 +27,8 @@ void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 
 void my_knob_read(lv_indev_t *indev, lv_indev_data_t *data)
 {
-    data->enc_diff = floorf(knobdelta);
-    knobdelta -= floorf(knobdelta);
+    data->enc_diff = knobdelta;
+    knobdelta = 0; // data->enc_diff;
     if (digitalRead(PIN_KNOB_PRESS) == LOW)
     {
         data->state = LV_INDEV_STATE_PRESSED;
@@ -72,8 +72,14 @@ void lvsetup()
     setup_ui(&guider_ui);
     events_init(&guider_ui);
 
-    lv_group_t *g1 = lv_group_get_default();
+    lv_group_t *g1 = lv_group_create();
     lv_indev_set_group(knob, g1);
+    lv_group_add_obj(g1, guider_ui.screen_sw_1);
+    lv_group_add_obj(g1, guider_ui.screen_sw_2);
+    lv_group_add_obj(g1, guider_ui.screen_sw_3);
+    lv_group_add_obj(g1, guider_ui.screen_slider_1);
+    lv_group_add_obj(g1, guider_ui.screen_slider_2);
+    lv_group_add_obj(g1, guider_ui.screen_btn_1);
     lv_timer_handler();
     digitalWrite(PIN_TFT_BL, HIGH); // 打开背光
 }
