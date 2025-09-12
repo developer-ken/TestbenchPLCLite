@@ -7,12 +7,15 @@
 
 #include "gui_guider.h"
 #include "events_init.h"
+#include <esp_sleep.h> // 新增头文件
 
 Arduino_DataBus *bus = new Arduino_ESP32SPIDMA(PIN_TFT_RS, PIN_TFT_CS, PIN_TFT_CLK, PIN_TFT_MOSI, -1, 1);
 Arduino_GFX *gfx = new Arduino_ST7789(bus, PIN_TFT_RST, 0, true, TFT_VER_RES, TFT_HOR_RES, 0, 40, 53, 0);
 
 uint32_t draw_bufA[DRAW_BUF_SIZE / 4];
 uint32_t draw_bufB[DRAW_BUF_SIZE / 4];
+
+bool powerloss = false;
 
 lv_ui guider_ui;
 
@@ -82,8 +85,8 @@ void lvsetup()
     lv_group_add_obj(g1, guider_ui.screen_autoboot);
     lv_group_add_obj(g1, guider_ui.screen_staterecover);
     lv_group_add_obj(g1, guider_ui.screen_wireless);
-    
-    const char* screen_wireless_connqr_data = "WIFI:T:WPA/WPA2;S:testbenchplc-2n75;P:43567834;H:true;";
+
+    const char *screen_wireless_connqr_data = "WIFI:T:WPA/WPA2;S:testbenchplc-2n75;P:43567834;H:true;";
     lv_qrcode_update(guider_ui.screen_wireless_connqr, screen_wireless_connqr_data, lv_strlen(screen_wireless_connqr_data));
 
     lv_timer_handler();
@@ -92,5 +95,33 @@ void lvsetup()
 
 void lvloop()
 {
+    int d = digitalRead(PIN_BROWNOUT);
+    if (!powerloss && !d)
+    {
+        // Brownout detected
+        lv_obj_remove_flag(guider_ui.screen_powerloss, LV_OBJ_FLAG_HIDDEN);
+        digitalWrite(PIN_LEDPWR, HIGH);
+        analogWrite(PIN_TFT_BL, 10);
+        powerloss = true;
+    }
+    else if (powerloss && d)
+    {
+        lv_obj_add_flag(guider_ui.screen_powerloss, LV_OBJ_FLAG_HIDDEN);
+        digitalWrite(PIN_LEDPWR, LOW);
+        analogWrite(PIN_TFT_BL, 255);
+        powerloss = false;
+    }
+    if (powerloss)
+    {
+        if (analogReadMilliVolts(PIN_VCAP) < 2.5)
+        {
+            analogWrite(PIN_TFT_BL, 0);
+            digitalWrite(PIN_LEDPWR, HIGH);
+
+            esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_BROWNOUT, 1);
+            esp_deep_sleep_start();
+            // 进入深度睡眠后不会执行后续代码
+        }
+    }
     lv_timer_handler(); /* let the GUI do its work */
 }

@@ -63,6 +63,7 @@ typedef struct
 	lv_obj_t *screen_label_20;
 	lv_obj_t *screen_label_19;
 	lv_obj_t *screen_wireless;
+	lv_obj_t *screen_powerloss;
 }lv_ui;
 
 typedef void (*ui_setup_scr_t)(lv_ui * ui);
@@ -99,6 +100,8 @@ LV_FONT_DECLARE(lv_font_montserratMedium_12)
 LV_FONT_DECLARE(lv_font_montserratMedium_15)
 LV_FONT_DECLARE(lv_font_montserratMedium_16)
 LV_FONT_DECLARE(lv_font_SourceHanSansCNBold2_10)
+LV_FONT_DECLARE(lv_font_SourceHanSansCNBold2_14)
+LV_FONT_DECLARE(lv_font_SourceHanSansCNBold2_20)
 
 
 #ifdef __cplusplus
