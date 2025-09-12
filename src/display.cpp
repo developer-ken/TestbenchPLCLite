@@ -87,6 +87,7 @@ void lvsetup()
     lv_group_add_obj(g1, guider_ui.screen_wireless);
 
     const char *screen_wireless_connqr_data = "WIFI:T:WPA/WPA2;S:testbenchplc-2n75;P:43567834;H:true;";
+    lv_qrcode_set_dark_color(guider_ui.screen_wireless_connqr, lv_color_hex(0x000000));
     lv_qrcode_update(guider_ui.screen_wireless_connqr, screen_wireless_connqr_data, lv_strlen(screen_wireless_connqr_data));
 
     lv_timer_handler();

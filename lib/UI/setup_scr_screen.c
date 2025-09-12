@@ -818,7 +818,7 @@ void setup_scr_screen(lv_ui *ui)
     lv_obj_set_pos(ui->screen_wireless_connqr, 33, 30);
     lv_obj_set_size(ui->screen_wireless_connqr, 86, 86);
     lv_qrcode_set_size(ui->screen_wireless_connqr, 86);
-    lv_qrcode_set_dark_color(ui->screen_wireless_connqr, lv_color_hex(0x2C3224));
+    lv_qrcode_set_dark_color(ui->screen_wireless_connqr, lv_color_hex(0xF0F0F0));
     lv_qrcode_set_light_color(ui->screen_wireless_connqr, lv_color_hex(0xffffff));
     const char * screen_wireless_connqr_data = " ";
     lv_qrcode_update(ui->screen_wireless_connqr, screen_wireless_connqr_data, lv_strlen(screen_wireless_connqr_data));
