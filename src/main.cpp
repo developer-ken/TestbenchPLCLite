@@ -21,7 +21,7 @@ void setup()
         digitalWrite(PIN_LEDPWR, HIGH);
     }
     analogWrite(PIN_BEEP, 0); // Off
-    analogWriteFrequency(PIN_BEEP, 4000);
+    analogWriteFrequency(4000);
     Serial.begin(115200);
     dataregisterpool = (uint16_t *)malloc(sizeof(uint16_t) * 524288); // 1MB for data registers
     init_knob();
