@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TestbenchPLC - Editor</title>
+    <link rel="icon shortcut" type="image/x-icon" href="./favicon.ico">
+    <script src="./scripts/blockly_compressed.js"></script>
+    <script src="./scripts/blocks_compressed.js"></script>
+    <script src="./scripts/javascript_compressed.js"></script>
+    <script src="./scripts/zh-hans.js"></script>
+    <meta name="description" content="TestbenchPLC Editor">
+    <!-- Material Design Icons CDN -->
+    <link rel="stylesheet" href="./materialicon/materialdesignicons.min.css">
+    <style>
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            overflow: auto;
+            overscroll-behavior: none;
+            scrollbar-color: transparent transparent;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            height: 56px;
+            background: #1976d2;
+            color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        /* toolbox 样式 */
+        #toolbox {
+            position: relative;
+            width: 260px;
+            min-width: 60px;
+            background: #fff;
+            border-right: 1px solid #e0e0e0;
+            box-shadow: 2px 0 6px rgba(0, 0, 0, 0.04);
+            transition: width 0.3s;
+            z-index: 2;
+            height: 100%;
+            overflow: auto;
+        }
+
+        #toolbox.collapsed {
+            width: 0px;
+            min-width: 0px;
+        }
+
+        #toolbox-toggle {
+            display: none;
+            position: absolute;
+            top: 32px;
+            left: 260px;
+            /* toolbox宽度 */
+            width: 32px;
+            height: 32px;
+            /* 改短按钮高度 */
+            background: #1976d2;
+            color: #fff;
+            border: none;
+            border-radius: 0 10px 10px 0;
+            cursor: pointer;
+            z-index: 10;
+            font-size: 1.5em;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.08);
+            transition: left 0.3s;
+        }
+
+        #toolbox.collapsed~#toolbox-toggle {
+            left: 0;
+        }
+
+        #toolbox-toggle span {
+            margin-left: 2px;
+        }
+
+        @media (max-width: 900px),
+        (orientation: portrait) {
+            #toolbox.collapsed {
+                width: 0;
+                min-width: 0;
+            }
+
+            #toolbox-toggle {
+                display: block;
+            }
+        }
+
+        .toolbar-left {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .toolbar-center {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        .toolbar-center select {
+            padding: 6px 12px;
+            font-size: 1em;
+            border-radius: 4px;
+            border: none;
+            min-width: max-content;
+            width: 33vw;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .toolbar-right {
+            display: flex;
+            gap: 8px;
+        }
+
+        .toolbar-right button {
+            background: #fff;
+            color: #1976d2;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toolbar-right button:hover {
+            background: #e3f2fd;
+        }
+
+        .main-content {
+            flex: 1;
+            width: 100%;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            justify-content: flex-start;
+            position: relative;
+        }
+
+        @media (max-width: 600px) {
+            .toolbar {
+                flex-direction: column;
+                height: auto;
+                padding: 8px;
+            }
+
+            .toolbar-center {
+                margin: 8px 0;
+            }
+
+            .toolbar-right {
+                justify-content: center;
+            }
+
+            .toolbar-left {
+                display: none !important;
+            }
+        }
+
+        #orientation-tip {
+            display: none;
+            background: #ffc107;
+            color: #333;
+            text-align: center;
+            padding: 8px;
+            font-size: 1em;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+        }
+    </style>
+    <script type="text/javascript">
+        const FSD_SETFREQ = {
+            init: function () {
+                this.appendValueInput('NAME')
+                    .setCheck('Number')
+                    .appendField('将变频器')
+                    .appendField(new Blockly.FieldNumber(1, 0, 255, 1), 'ID')
+                    .appendField('频率设置为');
+                this.appendDummyInput('NAME')
+                    .appendField('Hz');
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(195);
+            }
+        };
+        const EVENT_DI = {
+            init: function () {
+                this.appendDummyInput('NAME')
+                    .appendField('当输入')
+                    .appendField(new Blockly.FieldDropdown([
+                        ['DI1', 'DI1'],
+                        ['DI2', 'DI2'],
+                        ['DI3', 'DI3'],
+                        ['DI4', 'DI4']
+                    ]), 'pin')
+                    .appendField(new Blockly.FieldDropdown([
+                        ['变为有效', 'RISE'],
+                        ['变为无效', 'FALL'],
+                        ['发生改变', 'CHANGE']
+                    ]), 'edge');
+                this.setNextStatement(true, null);
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(285);
+            }
+        };
+        const EVENT_PWRON = {
+            init: function () {
+                this.appendDummyInput('NAME')
+                    .appendField('当程序开始运行');
+                this.setNextStatement(true, null);
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(285);
+            }
+        };
+        const FSD_RUNSTOP = {
+            init: function () {
+                this.appendDummyInput('NAME')
+                    .appendField('控制变频器')
+                    .appendField(new Blockly.FieldNumber(1, 0, 255, 1), 'ID')
+                    .appendField(new Blockly.FieldDropdown([
+                        ['开始运行', 'RUN'],
+                        ['刹车停止', 'STOP'],
+                        ['停机空转', 'FREESTOP']
+                    ]), 'command');
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(195);
+            }
+        };
+        const FSD_RISEFALLTIME = {
+            init: function () {
+                this.appendValueInput('speed')
+                    .appendField('变频器')
+                    .appendField(new Blockly.FieldNumber(1, 0, 255, 1), 'ID')
+                    .appendField(new Blockly.FieldDropdown([
+                        ['加速', 'rise'],
+                        ['减速', 'fall']
+                    ]), 'risefall')
+                    .appendField('时间设置为');
+                this.appendDummyInput('NAME')
+                    .appendField('秒');
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(195);
+            }
+        };
+        const EVENT_FSD = {
+            init: function () {
+                this.appendDummyInput('NAME')
+                    .appendField('当变频器')
+                    .appendField(new Blockly.FieldNumber(1, 0, 255, 1), 'ID')
+                    .appendField(new Blockly.FieldDropdown([
+                        ['加速完成', 'rised'],
+                        ['减速完成', 'falled'],
+                        ['出现故障', 'fault']
+                    ]), 'trigger');
+                this.setNextStatement(true, null);
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(285);
+            }
+        };
+        const FSD_GETVALUE = {
+            init: function () {
+                this.appendDummyInput('NAME')
+                    .appendField('变频器')
+                    .appendField(new Blockly.FieldNumber(1, 0, 255, 1), 'ID')
+                    .appendField('的')
+                    .appendField(new Blockly.FieldDropdown([
+                        ['实时频率', 'freq'],
+                        ['母线电压', 'volt'],
+                        ['输出电流', 'curr'],
+                        ['模块温度', 'temp']
+                    ]), 'aa');
+                this.setOutput(true, 'Number');
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(195);
+            }
+        };
+        const REG_GET = {
+            init: function () {
+                this.appendValueInput('ADDR')
+                    .setCheck('Number')
+                    .appendField('寄存器');
+                this.appendDummyInput('NAME')
+                    .appendField('的值');;
+                this.setOutput(true, null);
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(330);
+            }
+        };
+        const REG_SET = {
+            init: function () {
+                this.appendValueInput('ADDR')
+                    .setCheck('Number')
+                    .appendField('写寄存器');
+                this.appendValueInput('VALUE')
+                    .setCheck('Number')
+                    .appendField('为');
+                this.appendDummyInput('NAME');
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(330);
+            }
+        };
+        const DI_IN = {
+            init: function () {
+                this.appendDummyInput('NAME')
+                    .appendField(new Blockly.FieldDropdown([
+                        ['DI1', 'DI1'],
+                        ['DI2', 'DI2'],
+                        ['DI3', 'DI3'],
+                        ['DI4', 'DI4']
+                    ]), 'ID');
+                this.setOutput(true, 'Number');
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(0);
+            }
+        };
+        const AI_IN = {
+            init: function () {
+                this.appendDummyInput('NAME')
+                    .appendField(new Blockly.FieldDropdown([
+                        ['AI1', 'AI1'],
+                        ['AI2', 'AI2']
+                    ]), 'ID')
+                    .appendField('mV');
+                this.setOutput(true, 'Number');
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(0);
+            }
+        };
+        const IO_OUT = {
+            init: function () {
+                this.appendDummyInput('NAME')
+                    .appendField(new Blockly.FieldDropdown([
+                        ['DO1', 'DO1'],
+                        ['DO2', 'DO2'],
+                        ['DO3', 'DO3'],
+                        ['DO4', 'DO4']
+                    ]), 'ID')
+                    .appendField('设为');
+                this.appendValueInput('VALUE')
+                    .setCheck('Number');
+                this.appendEndRowInput('NAME');
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(0);
+            }
+        };
+        const CTRL_DELAY = {
+            init: function () {
+                this.appendValueInput('NAME')
+                    .setCheck('Number')
+                    .appendField('等待');
+                this.appendEndRowInput('VALUE')
+                    .appendField('ms');
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(210);
+            }
+        };
+        const MODBUS_WRITE = {
+            init: function () {
+                this.appendValueInput('VALUE')
+                    .setCheck('Number')
+                    .appendField('向通讯接口')
+                    .appendField(new Blockly.FieldDropdown([
+                        ['1', '1'],
+                        ['2', '2']
+                    ]), 'ID')
+                    .appendField('从机');
+                this.appendValueInput('SLAVE')
+                    .setCheck('Number')
+                    .appendField('地址');
+                this.appendValueInput('ADDR')
+                    .setCheck('Number')
+                    .appendField('写')
+                    .appendField(new Blockly.FieldDropdown([
+                        ['线圈(05)', '5'],
+                        ['寄存器(06)', '6']
+                    ]), 'type')
+                    .appendField('为');
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(0);
+            }
+        };
+        const MODBUS_READ = {
+            init: function () {
+                this.appendValueInput('VALUE')
+                    .setCheck('Number')
+                    .appendField('读通讯接口')
+                    .appendField(new Blockly.FieldDropdown([
+                        ['1', '1'],
+                        ['2', '2']
+                    ]), 'ID')
+                    .appendField('从机');
+                this.appendValueInput('SLAVE')
+                    .setCheck('Number')
+                    .appendField('读取')
+                    .appendField(new Blockly.FieldDropdown([
+                        ['线圈(01)', '1'],
+                        ['寄存器(04)', '4']
+                    ]), 'ID')
+                    .appendField('地址');
+                this.setOutput(true, null);
+                this.setTooltip('');
+                this.setHelpUrl('');
+                this.setColour(0);
+            }
+        };
+        Blockly.common.defineBlocks({ FSD_SETFREQ: FSD_SETFREQ });
+        Blockly.common.defineBlocks({ EVENT_DI: EVENT_DI });
+        Blockly.common.defineBlocks({ EVENT_PWRON: EVENT_PWRON });
+        Blockly.common.defineBlocks({ FSD_RUNSTOP: FSD_RUNSTOP });
+        Blockly.common.defineBlocks({ FSD_RISEFALLTIME: FSD_RISEFALLTIME });
+        Blockly.common.defineBlocks({ EVENT_FSD: EVENT_FSD });
+        Blockly.common.defineBlocks({ FSD_GETVALUE: FSD_GETVALUE });
+        Blockly.common.defineBlocks({ REG_GET: REG_GET });
+        Blockly.common.defineBlocks({ REG_SET: REG_SET });
+        Blockly.common.defineBlocks({ DI_IN: DI_IN });
+        Blockly.common.defineBlocks({ AI_IN: AI_IN });
+        Blockly.common.defineBlocks({ IO_OUT: IO_OUT });
+        Blockly.common.defineBlocks({ CTRL_DELAY: CTRL_DELAY });
+        Blockly.common.defineBlocks({ MODBUS_WRITE: MODBUS_WRITE });
+        Blockly.common.defineBlocks({ MODBUS_READ: MODBUS_READ });
+
+        var toolbox = {
+            "kind": "categoryToolbox",
+            "contents": [
+                {
+                    "kind": "category",
+                    "name": "入口",
+                    "colour": "285",
+                    "contents": [
+                        {
+                            "kind": "block",
+                            "type": "EVENT_PWRON"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "EVENT_DI"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "EVENT_FSD"
+                        }
+                    ]
+                },
+                {
+                    "kind": "category",
+                    "name": "分支",
+                    "colour": "210",
+                    "contents": [
+                        {
+                            "kind": "block",
+                            "type": "controls_if"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "logic_compare"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "logic_operation"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "logic_negate"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "logic_boolean"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "CTRL_DELAY"
+                        }
+                    ]
+                },
+                {
+                    "kind": "category",
+                    "name": "循环",
+                    "colour": "120",
+                    "contents": [
+                        {
+                            "kind": "block",
+                            "type": "controls_whileUntil"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "controls_for"
+                        }
+                    ]
+                },
+                {
+                    "kind": "category",
+                    "name": "数学",
+                    "colour": "225",
+                    "contents": [
+                        {
+                            "kind": "block",
+                            "type": "math_number"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "math_arithmetic"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "math_single"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "math_trig"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "math_constant"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "math_number_property"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "math_round"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "math_modulo"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "math_random_int"
+                        }
+                    ]
+                },
+                {
+                    "kind": "category",
+                    "name": "存取",
+                    "colour": "330",
+                    "contents": [
+                        {
+                            "kind": "block",
+                            "type": "REG_GET"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "REG_SET"
+                        }
+                    ]
+                },
+                {
+                    "kind": "category",
+                    "name": "IO",
+                    "colour": "0",
+                    "contents": [
+                        {
+                            "kind": "block",
+                            "type": "DI_IN"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "AI_IN"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "IO_OUT"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "MODBUS_READ"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "MODBUS_WRITE"
+                        }
+                    ]
+                },
+                {
+                    "kind": "category",
+                    "name": "变频",
+                    "colour": "195",
+                    "contents": [
+                        {
+                            "kind": "block",
+                            "type": "FSD_GETVALUE"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "FSD_RISEFALLTIME"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "FSD_RUNSTOP"
+                        },
+                        {
+                            "kind": "block",
+                            "type": "FSD_SETFREQ"
+                        }
+                    ]
+                }
+            ]
+        };
+    </script>
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function () {
+            const blocklyArea = document.getElementById('mainContent');
+            const blocklyDiv = document.getElementById('blocklyDiv');
+            const workspace = Blockly.inject(blocklyDiv, {
+                toolbox: toolbox,
+                sounds: false,
+                renderer: 'thrasos',
+                scrollbars: true,
+                zoom:
+                {
+                    controls: false,
+                    wheel: true,
+                    startScale: 0.7,
+                    maxScale: 1,
+                    minScale: 0.3,
+                    scaleSpeed: 1.2,
+                    pinch: true
+                },
+            });
+
+            // blocklyDiv 尺寸调整
+            const onresize = function (e) {
+                var eelement = blocklyArea;
+                let x = 0;
+                let y = 0;
+                blocklyDiv.style.left = x + 'px';
+                blocklyDiv.style.top = y + 'px';
+                blocklyDiv.style.width = blocklyArea.offsetWidth + 'px';
+                blocklyDiv.style.height = blocklyArea.offsetHeight + 'px';
+                Blockly.svgResize(workspace);
+            };
+            window.addEventListener('resize', onresize, false);
+            onresize();
+
+            // 屏幕方向提示
+            function showOrientationTipIfNeeded() {
+                const tip = document.getElementById('orientation-tip');
+                // 判断是否为移动设备
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                // 判断是否为竖屏
+                const isPortrait = window.innerHeight > window.innerWidth;
+                if (isMobile && isPortrait) {
+                    tip.style.display = 'block';
+                } else {
+                    tip.style.display = 'none';
+                }
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        function Download() {
+            var wbjson = Blockly.serialization.workspaces.save(Blockly.getMainWorkspace());
+            var filename = 'program.json';
+            var downloadLink = document.createElement('a');
+            downloadLink.download = filename;
+            downloadLink.href = window.URL.createObjectURL(new Blob([JSON.stringify(wbjson, null, 1)],{type: 'application/json'}));
+            downloadLink.style.display = 'none';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+        }
+    </script>
+</head>
+
+<body>
+    <div class="toolbar">
+        <div class="toolbar-left">TestbenchPLC 流程编辑器</div>
+        <div class="toolbar-center">
+            <select>
+                <option value="option1">默认程序</option>
+            </select>
+        </div>
+        <div class="toolbar-right">
+            <button title="删除"><span class="mdi mdi-delete"></span></button>
+            <button title="保存"><span class="mdi mdi-content-save"></span></button>
+            <button title="导出" onclick="Download();"><span class="mdi mdi-download"></span></button>
+            <button title="运行"><span class="mdi mdi-play-circle"></span></button>
+        </div>
+    </div>
+    <div class="main-content" id="mainContent">
+        <div id="blocklyDiv" style="position: absolute"></div>
+    </div>
+</body>
+
+</html>
