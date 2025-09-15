@@ -55,6 +55,31 @@ static uint32_t my_tick(void)
     return millis();
 }
 
+void WifiStateUpdate()
+{
+    if (lv_obj_has_state(guider_ui.screen_wireless, LV_STATE_CHECKED))
+    {
+        WifiEnable();
+        String connstring = "WIFI:T:WPA2;S:" + ssid + ";P:" + password + ";H:true;";
+        const char *screen_wireless_connqr_data = connstring.c_str();
+        lv_qrcode_set_dark_color(guider_ui.screen_wireless_connqr,
+                                 lv_color_hex(0x000000));
+        lv_qrcode_update(guider_ui.screen_wireless_connqr,
+                         screen_wireless_connqr_data,
+                         lv_strlen(screen_wireless_connqr_data));
+    }
+    else
+    {
+        WifiDisable();
+        const char *screen_wireless_connqr_data = " ";
+        lv_qrcode_set_dark_color(guider_ui.screen_wireless_connqr,
+                                 lv_color_hex(0xF0F0F0));
+        lv_qrcode_update(guider_ui.screen_wireless_connqr,
+                         screen_wireless_connqr_data,
+                         lv_strlen(screen_wireless_connqr_data));
+    }
+}
+
 void lvsetup()
 {
     pinMode(PIN_TFT_BL, OUTPUT);
@@ -95,28 +120,25 @@ void lvsetup()
 
     // 为screen_wireless开关添加事件处理
     lv_obj_add_event_cb(guider_ui.screen_wireless, [](lv_event_t *e)
-                        {
-        lv_event_code_t code = lv_event_get_code(e);
-        if(code == LV_EVENT_VALUE_CHANGED) {
-            if(lv_obj_has_state(guider_ui.screen_wireless, LV_STATE_CHECKED)) {
-                WifiEnable();
-                String connstring = "WIFI:T:WPA2;S:"+ssid+";P:"+password+";H:true;";
-                const char *screen_wireless_connqr_data = connstring.c_str();
-                lv_qrcode_set_dark_color(guider_ui.screen_wireless_connqr,
-                    lv_color_hex(0x000000));
-                lv_qrcode_update(guider_ui.screen_wireless_connqr,
-                    screen_wireless_connqr_data,
-                    lv_strlen(screen_wireless_connqr_data));
-            } else {
-                WifiDisable();
-                const char *screen_wireless_connqr_data = " ";
-                lv_qrcode_set_dark_color(guider_ui.screen_wireless_connqr,
-                    lv_color_hex(0xF0F0F0));
-                lv_qrcode_update(guider_ui.screen_wireless_connqr,
-                    screen_wireless_connqr_data,
-                    lv_strlen(screen_wireless_connqr_data));
-            }
-        } }, LV_EVENT_VALUE_CHANGED, NULL);
+                        { WifiStateUpdate(); }, LV_EVENT_VALUE_CHANGED, NULL);
+
+    lv_obj_add_event_cb(guider_ui.screen_autoboot, [](lv_event_t *e)
+                        { config.AutoBoot = lv_obj_has_state(guider_ui.screen_autoboot, LV_STATE_CHECKED); }, LV_EVENT_VALUE_CHANGED, NULL);
+
+    lv_obj_add_event_cb(guider_ui.screen_nonvolatile, [](lv_event_t *e)
+                        { config.NonVolatile = lv_obj_has_state(guider_ui.screen_nonvolatile, LV_STATE_CHECKED); }, LV_EVENT_VALUE_CHANGED, NULL);
+
+    lv_obj_add_event_cb(guider_ui.screen_staterecover, [](lv_event_t *e)
+                        { config.StateRecover = lv_obj_has_state(guider_ui.screen_staterecover, LV_STATE_CHECKED); }, LV_EVENT_VALUE_CHANGED, NULL);
+
+    lv_obj_add_event_cb(guider_ui.screen_wireless, [](lv_event_t *e)
+                        { config.Wifi = lv_obj_has_state(guider_ui.screen_wireless, LV_STATE_CHECKED); }, LV_EVENT_VALUE_CHANGED, NULL);
+
+    lv_obj_add_event_cb(guider_ui.screen_run, [](lv_event_t *e)
+                        { config.Running = lv_obj_has_state(guider_ui.screen_run, LV_STATE_CHECKED); }, LV_EVENT_VALUE_CHANGED, NULL);
+
+    lv_obj_add_event_cb(guider_ui.screen_fileselect, [](lv_event_t *e)
+                        { config.SelectedProgramIndex = lv_roller_get_selected(guider_ui.screen_fileselect); }, LV_EVENT_VALUE_CHANGED, NULL);
 
     // 根据config设置guiderui的各个switch状态
     lv_obj_set_state(guider_ui.screen_nonvolatile, LV_STATE_CHECKED, config.NonVolatile);
@@ -124,7 +146,17 @@ void lvsetup()
     lv_obj_set_state(guider_ui.screen_staterecover, LV_STATE_CHECKED, config.StateRecover);
     lv_obj_set_state(guider_ui.screen_wireless, LV_STATE_CHECKED, config.Wifi);
 
+    if (config.SelectedProgramIndex < lv_roller_get_option_count(guider_ui.screen_fileselect))
+    {
+        lv_roller_set_selected(guider_ui.screen_fileselect, config.SelectedProgramIndex, LV_ANIM_OFF);
+        if (config.AutoBoot)
+        {
+            lv_obj_set_state(guider_ui.screen_run, LV_STATE_CHECKED, config.Running);
+        }
+    }
+
     lvproglistupdate();
+    WifiStateUpdate();
     lv_timer_handler();
     digitalWrite(PIN_TFT_BL, HIGH); // 打开背光
 }
@@ -182,7 +214,7 @@ void lvproglistupdate()
         while (file)
         {
             String fname = file.name();
-            if (!file.isDirectory() && fname.endsWith(".tbp") && fname != "default.tbp")
+            if (!file.isDirectory() && fname.endsWith(".tbp"))
             {
                 if (!first)
                 {

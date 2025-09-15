@@ -9,7 +9,7 @@
 
 uint16_t *dataregisterpool;
 
-GConfig config = {false, false, false, false, ""};
+GConfig config = {false, false, false, false, false, 0};
 
 void setup()
 {
@@ -27,6 +27,9 @@ void setup()
     analogWrite(PIN_BEEP, 0); // Off
     analogWriteFrequency(4000);
     Serial.begin(115200);
+
+    delay(3000);
+
     dataregisterpool = (uint16_t *)malloc(sizeof(uint16_t) * 524288); // 1MB for data registers
     init_knob();
     storage_setup();
@@ -34,9 +37,14 @@ void setup()
     if (SD.exists("/config.bin"))
     {
         // Load config
+        log_i("Loading config from binary record...");
         File f = SD.open("/config.bin", FILE_READ);
         f.read((uint8_t *)&config, sizeof(config));
         f.close();
+        log_i("CONF_NonVolatile: %d", config.NonVolatile);
+        log_i("CONF_StateRecover: %d", config.StateRecover);
+        log_i("CONF_AutoBoot: %d", config.AutoBoot);
+        log_i("CONF_Wifi: %d", config.Wifi);
     }
 
     lvsetup();
@@ -51,6 +59,7 @@ void loop()
 
 void SaveConfig()
 {
+    log_i("Saving config to binary record...");
     File f = SD.open("/config.bin", FILE_WRITE);
     f.write((uint8_t *)&config, sizeof(config));
     f.flush();

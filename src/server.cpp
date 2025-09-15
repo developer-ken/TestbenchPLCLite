@@ -135,6 +135,7 @@ void webserver_setup()
     IPAddress gateway(192, 168, 45, 1);
     IPAddress subnet(255, 255, 255, 0);
     WiFi.softAPConfig(local_IP, gateway, subnet);
+    WiFi.softAPdisconnect(true);
 }
 
 void WifiEnable()
@@ -230,11 +231,12 @@ void WifiEnable()
 
     // 删除程序API
     {
-        webServer.on("/api/delete", HTTP_GET, []()
+        webServer.on("/api/progdel", HTTP_GET, []()
                      {
-            log_i("/api/delete api request;");
+            log_i("/api/progdel api request;");
             // 检查是否有name参数
             if (!webServer.hasArg("name")) {
+                log_w("Delete request missing name parameter");
                 webServer.send(400, "application/json", "{\"error\":\"Missing name parameter\"}");
                 return;
             }
@@ -247,10 +249,12 @@ void WifiEnable()
 
             // 尝试删除文件
             if (SD.remove("/" + filename)) {
+                log_i("File deleted successfully");
                 webServer.send(200, "application/json", "{\"status\":\"success\"}");
             }
             else
             {
+                log_w("File deletion failed");
                 webServer.send(500, "application/json", "{\"error\":\"Failed to delete file\"}");
             }
 
@@ -290,7 +294,7 @@ void WifiEnable()
         String path = webServer.uri();
         log_i("Static request for %s", path.c_str());
         // 如果请求的文件存在于LittleFS中，则返回文件
-        if (path != "/" && LittleFS.exists(path)) {
+        if (!path.equals("/") && LittleFS.exists(path)) {
             File file = LittleFS.open(path, "r");
             if (file) {
                 String contentType = getContentType(path);

@@ -18,7 +18,7 @@
             height: 100%;
             overflow: hidden;
         }
-        
+
         /* 加载遮罩样式 */
         #loading-overlay {
             position: fixed;
@@ -33,7 +33,7 @@
             align-items: center;
             z-index: 9999;
         }
-        
+
         .spinner {
             width: 50px;
             height: 50px;
@@ -43,12 +43,17 @@
             animation: spin 1s linear infinite;
             margin-bottom: 15px;
         }
-        
+
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
-        
+
         .loading-text {
             color: #d4d4d4;
             font-size: 16px;
@@ -248,7 +253,37 @@
             align-items: center;
         }
     </style>
+</head>
+
+<body>
+    <!-- 加载遮罩 -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">正在加载编辑器...</div>
+    </div>
+
+    <div class="toolbar">
+        <div class="toolbar-left">TestbenchPLC 流程编辑器</div>
+        <div class="toolbar-center">
+            <select id="programSelect">
+                <option value="default">default</option>
+                <option value="new">新建...</option>
+            </select>
+        </div>
+        <div class="toolbar-right">
+            <button title="删除" onclick="DeleteProgram();"><span class="mdi mdi-delete"></span></button>
+            <button title="保存" onclick="Save();"><span class="mdi mdi-content-save"></span></button>
+            <button title="导出" onclick="Download();"><span class="mdi mdi-file-export"></span></button>
+            <button title="导入" onclick="Import();"><span class="mdi mdi-file-upload"></span></button>
+            <!--button title="运行" onclick="RunProgram();"><span class="mdi mdi-play-circle"></span></button-->
+        </div>
+    </div>
+    <div class="main-content" id="mainContent">
+        <div id="blocklyDiv" style="position: absolute"></div>
+    </div>
     <script type="text/javascript">
+        var programSelect = document.getElementById('programSelect');
+
         const FSD_SETFREQ = {
             init: function () {
                 this.appendValueInput('NAME')
@@ -709,7 +744,6 @@
         window.addEventListener('DOMContentLoaded', function () {
             // 当选择程序时加载程序内容
             programSelect.addEventListener('change', function (e) {
-                const programSelect = document.getElementById('programSelect');
                 // 如果选择的是"新建..."，则不执行加载操作
                 if (e.target.value === 'new') {
                     return;
@@ -1206,24 +1240,25 @@
                 // 恢复默认选择
                 select.value = select.options[0].value;
             }
+
+            programSelect.dispatchEvent(new Event('change'));
         });
 
     </script>
     <script type="text/javascript">
         function RunProgram() {
-            const programSelect = document.getElementById('programSelect');
             const selectedProgram = programSelect.value;
-            
+
             // 如果选择的是"新建..."，则提示用户先选择一个程序
             if (selectedProgram === 'new' || selectedProgram === '') {
                 alert('请先选择一个程序');
                 return;
             }
-            
+
             // 创建GET请求
             const xhr = new XMLHttpRequest();
             xhr.open('GET', './api/progrun?name=' + encodeURIComponent(selectedProgram), true);
-            
+
             // 设置请求完成后的回调函数
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === 4) {
@@ -1240,9 +1275,9 @@
     </script>
     <script type="text/javascript">
         // 页面加载完成后隐藏加载遮罩
-        window.addEventListener('load', function() {
+        window.addEventListener('load', function () {
             // 确保所有资源都已加载
-            setTimeout(function() {
+            setTimeout(function () {
                 const loadingOverlay = document.getElementById('loading-overlay');
                 if (loadingOverlay) {
                     loadingOverlay.style.display = 'none';
@@ -1250,34 +1285,6 @@
             }, 500); // 额外等待500毫秒确保所有资源加载完成
         });
     </script>
-</head>
-
-<body>
-    <!-- 加载遮罩 -->
-    <div id="loading-overlay">
-        <div class="spinner"></div>
-        <div class="loading-text">正在加载编辑器...</div>
-    </div>
-    
-    <div class="toolbar">
-        <div class="toolbar-left">TestbenchPLC 流程编辑器</div>
-        <div class="toolbar-center">
-            <select id="programSelect">
-                <option value="default">default</option>
-                <option value="new">新建...</option>
-            </select>
-        </div>
-        <div class="toolbar-right">
-            <button title="删除" onclick="DeleteProgram();"><span class="mdi mdi-delete"></span></button>
-            <button title="保存" onclick="Save();"><span class="mdi mdi-content-save"></span></button>
-            <button title="导出" onclick="Download();"><span class="mdi mdi-file-export"></span></button>
-            <button title="导入" onclick="Import();"><span class="mdi mdi-file-upload"></span></button>
-            <button title="运行" onclick="RunProgram();"><span class="mdi mdi-play-circle"></span></button>
-        </div>
-    </div>
-    <div class="main-content" id="mainContent">
-        <div id="blocklyDiv" style="position: absolute"></div>
-    </div>
 </body>
 
 </html>
