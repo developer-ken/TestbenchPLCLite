@@ -11,13 +11,13 @@ uint16_t *dataregisterpool;
 
 struct
 {
-    bool NonVolatile = false,
-         AutoBoot = false,
-         StateRecover = false,
-         Wifi = false;
+    bool NonVolatile,
+         AutoBoot,
+         StateRecover,
+         Wifi;
 
     char SelectedProgram[64];
-} config;
+} config = {false, false, false, false, ""};
 
 void setup()
 {

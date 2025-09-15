@@ -29,7 +29,7 @@ extern struct
         Wifi;
 
     char SelectedProgram[64];
-} config = {false, false, false, false, ""};
+} config;
 
 void SaveConfig();
 
