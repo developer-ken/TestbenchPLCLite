@@ -1,15 +1,17 @@
 #include <Arduino.h>
+#include <esp_sleep.h>
 #include "Arduino_GFX_Library.h"
 
 #include "display.h"
 #include "pinout.h"
 #include "knob.h"
+#include "storage.h"
+#include "server.h"
 
 #include "gui_guider.h"
 #include "events_init.h"
-#include <esp_sleep.h> // 新增头文件
 
-Arduino_DataBus *bus = new Arduino_ESP32SPIDMA(PIN_TFT_RS, PIN_TFT_CS, PIN_TFT_CLK, PIN_TFT_MOSI, -1, 1);
+Arduino_DataBus *bus = new Arduino_ESP32SPIDMA(PIN_TFT_RS, PIN_TFT_CS, PIN_TFT_CLK, PIN_TFT_MOSI, -1, 2);
 Arduino_GFX *gfx = new Arduino_ST7789(bus, PIN_TFT_RST, 0, true, TFT_VER_RES, TFT_HOR_RES, 0, 40, 53, 0);
 
 uint32_t draw_bufA[DRAW_BUF_SIZE / 4];
@@ -18,6 +20,18 @@ uint32_t draw_bufB[DRAW_BUF_SIZE / 4];
 bool powerloss = false;
 
 lv_ui guider_ui;
+
+extern struct
+{
+    bool NonVolatile,
+        AutoBoot,
+        StateRecover,
+        Wifi;
+
+    char SelectedProgram[64];
+} config = {false, false, false, false, ""};
+
+void SaveConfig();
 
 /* LVGL calls it when a rendered image needs to copied to the display*/
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
@@ -85,11 +99,40 @@ void lvsetup()
     lv_group_add_obj(g1, guider_ui.screen_autoboot);
     lv_group_add_obj(g1, guider_ui.screen_staterecover);
     lv_group_add_obj(g1, guider_ui.screen_wireless);
+    lv_group_set_default(g1);
 
-    const char *screen_wireless_connqr_data = "WIFI:T:WPA/WPA2;S:testbenchplc-2n75;P:43567834;H:true;";
-    lv_qrcode_set_dark_color(guider_ui.screen_wireless_connqr, lv_color_hex(0x000000));
-    lv_qrcode_update(guider_ui.screen_wireless_connqr, screen_wireless_connqr_data, lv_strlen(screen_wireless_connqr_data));
+    // 为screen_wireless开关添加事件处理
+    lv_obj_add_event_cb(guider_ui.screen_wireless, [](lv_event_t *e)
+                        {
+        lv_event_code_t code = lv_event_get_code(e);
+        if(code == LV_EVENT_VALUE_CHANGED) {
+            if(lv_obj_has_state(guider_ui.screen_wireless, LV_STATE_CHECKED)) {
+                WifiEnable();
+                String connstring = "WIFI:T:WPA2;S:"+ssid+";P:"+password+";H:true;";
+                const char *screen_wireless_connqr_data = connstring.c_str();
+                lv_qrcode_set_dark_color(guider_ui.screen_wireless_connqr,
+                    lv_color_hex(0x000000));
+                lv_qrcode_update(guider_ui.screen_wireless_connqr,
+                    screen_wireless_connqr_data,
+                    lv_strlen(screen_wireless_connqr_data));
+            } else {
+                WifiDisable();
+                const char *screen_wireless_connqr_data = " ";
+                lv_qrcode_set_dark_color(guider_ui.screen_wireless_connqr,
+                    lv_color_hex(0xF0F0F0));
+                lv_qrcode_update(guider_ui.screen_wireless_connqr,
+                    screen_wireless_connqr_data,
+                    lv_strlen(screen_wireless_connqr_data));
+            }
+        } }, LV_EVENT_VALUE_CHANGED, NULL);
 
+    // 根据config设置guiderui的各个switch状态
+    lv_obj_set_state(guider_ui.screen_nonvolatile, LV_STATE_CHECKED, config.NonVolatile);
+    lv_obj_set_state(guider_ui.screen_autoboot, LV_STATE_CHECKED, config.AutoBoot);
+    lv_obj_set_state(guider_ui.screen_staterecover, LV_STATE_CHECKED, config.StateRecover);
+    lv_obj_set_state(guider_ui.screen_wireless, LV_STATE_CHECKED, config.Wifi);
+
+    lvproglistupdate();
     lv_timer_handler();
     digitalWrite(PIN_TFT_BL, HIGH); // 打开背光
 }
@@ -97,12 +140,15 @@ void lvsetup()
 void lvloop()
 {
     int d = digitalRead(PIN_BROWNOUT);
+    static uint32_t powerfailtime = millis();
     if (!powerloss && !d)
     {
         // Brownout detected
         lv_obj_remove_flag(guider_ui.screen_powerloss, LV_OBJ_FLAG_HIDDEN);
         digitalWrite(PIN_LEDPWR, HIGH);
         analogWrite(PIN_TFT_BL, 10);
+        SaveConfig();
+        powerfailtime = millis();
         powerloss = true;
     }
     else if (powerloss && d)
@@ -114,10 +160,12 @@ void lvloop()
     }
     if (powerloss)
     {
-        if (analogReadMilliVolts(PIN_VCAP) < 2.5)
+        if (millis() - powerfailtime > 5000)
         {
             analogWrite(PIN_TFT_BL, 0);
             digitalWrite(PIN_LEDPWR, HIGH);
+
+            // TODO: Execution engine - Save current state here
 
             esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_BROWNOUT, 1);
             esp_deep_sleep_start();
@@ -125,4 +173,32 @@ void lvloop()
         }
     }
     lv_timer_handler(); /* let the GUI do its work */
+}
+
+void lvproglistupdate()
+{
+    String response = "";
+    File root = SD.open("/");
+    if (root)
+    {
+        File file = root.openNextFile();
+        bool first = true;
+
+        while (file)
+        {
+            String fname = file.name();
+            if (!file.isDirectory() && fname.endsWith(".tbp") && fname != "default.tbp")
+            {
+                if (!first)
+                {
+                    response += "\n";
+                }
+                response += "\"" + fname.substring(0, fname.length() - 4) + "\"";
+                first = false;
+            }
+            file = root.openNextFile();
+        }
+        root.close();
+    }
+    lv_roller_set_options(guider_ui.screen_fileselect, response.c_str(), LV_ROLLER_MODE_INFINITE);
 }

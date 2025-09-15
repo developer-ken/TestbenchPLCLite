@@ -18,6 +18,41 @@
             height: 100%;
             overflow: hidden;
         }
+        
+        /* 加载遮罩样式 */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(30, 30, 30, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #333;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: #d4d4d4;
+            font-size: 16px;
+        }
 
         body {
             margin: 0;
@@ -190,6 +225,27 @@
             left: 0;
             width: 100%;
             z-index: 1000;
+        }
+
+        .program-input {
+            padding: 6px 12px;
+            font-size: 1em;
+            border-radius: 4px;
+            border: 1px solid #1976d2;
+            width: calc(100% - 24px);
+            box-sizing: border-box;
+            margin: 0 12px;
+        }
+
+        .program-input.error {
+            border-color: #ff1100;
+            background-color: #ff657d;
+        }
+
+        .program-select-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
         }
     </style>
     <script type="text/javascript">
@@ -651,6 +707,46 @@
     </script>
     <script type="text/javascript">
         window.addEventListener('DOMContentLoaded', function () {
+            // 当选择程序时加载程序内容
+            programSelect.addEventListener('change', function (e) {
+                const programSelect = document.getElementById('programSelect');
+                // 如果选择的是"新建..."，则不执行加载操作
+                if (e.target.value === 'new') {
+                    return;
+                }
+
+                // 获取选中的程序名称
+                const selectedProgram = e.target.value;
+
+                // 创建GET请求
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', './api/progload?name=' + encodeURIComponent(selectedProgram), true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+
+                // 设置请求完成后的回调函数
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                            try {
+                                // 解析JSON内容
+                                const content = JSON.parse(xhr.responseText);
+                                // 将内容加载到工作区
+                                Blockly.serialization.workspaces.load(content, Blockly.getMainWorkspace());
+                            } catch (error) {
+                                console.error('程序加载失败:', error);
+                            }
+                        } else {
+                            console.error('加载程序失败，状态码:', xhr.status);
+                        }
+                    }
+                };
+                // 发送请求
+                xhr.send();
+                // 清空工作区
+                const workspace = Blockly.getMainWorkspace();
+                workspace.clear();
+            });
+
             const blocklyArea = document.getElementById('mainContent');
             const blocklyDiv = document.getElementById('blocklyDiv');
             const workspace = Blockly.inject(blocklyDiv, {
@@ -697,35 +793,486 @@
                     tip.style.display = 'none';
                 }
             }
+
+            // 加载程序列表
+            fetch('./api/proglist')
+                .then(response => response.json())
+                .then(programs => {
+                    // 为每个程序创建选项并添加到选择框
+                    programs.forEach(program => {
+                        const option = document.createElement('option');
+                        option.value = program;
+                        option.textContent = program;
+                        // 在"新建..."选项之前插入
+                        programSelect.insertBefore(option, programSelect.lastElementChild);
+                    });
+                })
+                .catch(error => {
+                    console.error('加载程序列表失败:', error);
+                });
         });
     </script>
     <script type="text/javascript">
         function Download() {
+            if (programSelect.value == 'new') return;
             var wbjson = Blockly.serialization.workspaces.save(Blockly.getMainWorkspace());
-            var filename = 'program.json';
+            var filename = programSelect.value + '.tbp';
             var downloadLink = document.createElement('a');
             downloadLink.download = filename;
-            downloadLink.href = window.URL.createObjectURL(new Blob([JSON.stringify(wbjson, null, 1)],{type: 'application/json'}));
+            downloadLink.href = window.URL.createObjectURL(new Blob([JSON.stringify(wbjson, null, 1)], { type: 'application/json' }));
             downloadLink.style.display = 'none';
             document.body.appendChild(downloadLink);
             downloadLink.click();
         }
+
+        function Save() {
+            var programSelect = document.getElementById('programSelect');
+            var selectedProgram = programSelect.value;
+            var saveButton = document.querySelector('.toolbar-right button:nth-child(2)');
+
+            // 如果选择的是"新建..."，则提示用户先选择一个程序
+            if (selectedProgram === 'new') {
+                showSaveResult(saveButton, false);
+                return;
+            }
+
+            var wbjson = Blockly.serialization.workspaces.save(Blockly.getMainWorkspace());
+
+            // 创建POST请求
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', './api/save?name=' + (selectedProgram), true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+
+            // 设置请求完成后的回调函数
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    // 显示保存结果
+                    showSaveResult(saveButton, xhr.status === 200);
+                }
+            };
+
+            // 发送请求
+            xhr.send(JSON.stringify(wbjson));
+        }
+
+        function showSaveResult(button, isSuccess) {
+            // 保存原始内容
+            var originalContent = button.innerHTML;
+
+            // 创建淡出效果
+            button.style.transition = 'opacity 0.3s';
+            button.style.opacity = '0.5';
+
+            setTimeout(function () {
+                // 更改图标
+                if (isSuccess) {
+                    button.innerHTML = '<span class="mdi mdi-check"></span>';
+                } else {
+                    button.innerHTML = '<span class="mdi mdi-close"></span>';
+                }
+
+                // 恢复透明度
+                button.style.opacity = '1';
+
+                // 2秒后恢复原始内容
+                setTimeout(function () {
+                    button.style.transition = 'opacity 0.3s';
+                    button.style.opacity = '0.5';
+
+                    setTimeout(function () {
+                        button.innerHTML = originalContent;
+                        button.style.opacity = '1';
+                    }, 300);
+                }, 2000);
+            }, 300);
+        }
+
+        function DeleteProgram() {
+            const programSelect = document.getElementById('programSelect');
+            const selectedProgram = programSelect.value;
+
+            // 不能删除default程序
+            if (selectedProgram === 'default') {
+                alert('不能删除default程序');
+                return;
+            }
+
+            // 确认删除
+            if (!confirm('确定要删除程序 "' + selectedProgram + '" 吗？')) {
+                return;
+            }
+
+            // 调用API删除程序
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/progdel?name=' + encodeURIComponent(selectedProgram), true);
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        // 删除成功，从下拉列表中移除该选项
+                        const optionToRemove = Array.from(programSelect.options).find(opt => opt.value === selectedProgram);
+                        if (optionToRemove) {
+                            programSelect.removeChild(optionToRemove);
+                        }
+
+                        // 选中default
+                        programSelect.value = 'default';
+
+
+                        // 清空工作区
+                        const workspace = Blockly.getMainWorkspace();
+                        workspace.clear();
+                    } else {
+                        // 删除失败
+                        alert('删除程序失败: ' + (xhr.responseText || 'API操作发生未知错误'));
+                    }
+                }
+            };
+
+            // 发送请求
+            xhr.send();
+        }
+
+        function Import() {
+            // 创建文件选择元素
+            var input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.tbp'; // 只接受.tbp文件
+
+            // 添加文件选择事件监听
+            input.addEventListener('change', function (e) {
+                var file = e.target.files[0];
+                if (!file) return;
+
+                // 检查文件类型
+                if (!file.name.endsWith('.tbp')) {
+                    alert('仅支持导入.tbp文件');
+                    return;
+                }
+
+                // 读取文件内容
+                var reader = new FileReader();
+                reader.onload = function (event) {
+                    try {
+                        // 解析JSON内容
+                        var content = JSON.parse(event.target.result);
+                        // 将内容加载到工作区
+                        Blockly.serialization.workspaces.load(content, Blockly.getMainWorkspace());
+
+                        // 获取文件名（不含扩展名）
+                        var filename = file.name.replace(/\.tbp$/, '');
+
+                        // 检查是否已存在同名程序
+                        var programSelect = document.getElementById('programSelect');
+                        var existingOptions = Array.from(programSelect.options).filter(opt => opt.value !== 'new' && opt.value === filename);
+
+                        // 如果不存在同名程序，则添加新选项
+                        if (existingOptions.length === 0) {
+                            var option = document.createElement('option');
+                            option.value = filename;
+                            option.textContent = filename;
+                            programSelect.insertBefore(option, programSelect.lastElementChild);
+                        }
+
+                        // 选中该程序
+                        programSelect.value = filename;
+
+                        // 触发保存操作
+                        Save();
+                    } catch (error) {
+                        alert('文件解析失败: ' + error.message);
+                    }
+                };
+
+                reader.onerror = function () {
+                    alert('文件读取失败');
+                };
+
+                reader.readAsText(file);
+            });
+
+            // 触发文件选择对话框
+            input.click();
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            const programSelect = document.getElementById('programSelect');
+            const newOption = programSelect.querySelector('option[value="new"]');
+            let inputBox = null;
+
+            // 检查是否只有新建选项
+            const hasOnlyNewOption = programSelect.options.length === 1 &&
+                programSelect.options[0].value === 'new';
+
+            // 如果只有新建选项，直接显示文本框
+            if (hasOnlyNewOption) {
+                // 隐藏原来的select
+                programSelect.style.display = 'none';
+
+                // 创建容器
+                const wrapper = document.createElement('div');
+                wrapper.className = 'program-select-wrapper';
+                programSelect.parentNode.insertBefore(wrapper, programSelect);
+
+                // 创建输入框
+                inputBox = document.createElement('input');
+                inputBox.type = 'text';
+                inputBox.className = 'program-input';
+                inputBox.placeholder = '输入程序名称';
+                wrapper.appendChild(inputBox);
+
+                // 自动聚焦
+                inputBox.focus();
+                inputBox.select();
+
+                // 添加回车键监听
+                inputBox.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter') {
+                        createNewProgram(inputBox.value, wrapper, programSelect);
+                    } else if (event.key === 'Escape') {
+                        // 取消创建
+                        cancelNewProgram(wrapper, programSelect);
+                    }
+                });
+
+                // 添加失焦监听
+                inputBox.addEventListener('blur', function () {
+                    createNewProgram(inputBox.value, wrapper, programSelect);
+                });
+
+                // 添加输入验证
+                inputBox.addEventListener('input', function () {
+                    // 移除可能存在的错误提示
+                    const errorMsg = wrapper.querySelector('.error-message');
+                    if (errorMsg) {
+                        errorMsg.remove();
+                    }
+
+                    // 只允许大小写字母、数字和下划线
+                    const isValid = /^[a-zA-Z0-9_]*$/.test(inputBox.value);
+                    if (!isValid && inputBox.value !== '') {
+                        inputBox.classList.add('error');
+                    } else {
+                        inputBox.classList.remove('error');
+
+                        // 检查是否重名
+                        if (inputBox.value !== '') {
+                            const existingOptions = Array.from(programSelect.options).filter(opt => opt.value !== 'new' && opt.value === inputBox.value);
+                            if (existingOptions.length > 0) {
+                                inputBox.classList.add('error');
+                            }
+                        }
+                    }
+                });
+            } //else
+            {
+                // 当选择"新建..."时显示输入框
+                programSelect.addEventListener('change', function (e) {
+                    if (e.target.value === 'new') {
+                        // 隐藏原来的select
+                        programSelect.style.display = 'none';
+
+                        // 创建容器
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'program-select-wrapper';
+                        programSelect.parentNode.insertBefore(wrapper, programSelect);
+
+                        // 创建输入框
+                        inputBox = document.createElement('input');
+                        inputBox.type = 'text';
+                        inputBox.className = 'program-input';
+                        inputBox.placeholder = '输入程序名称';
+                        wrapper.appendChild(inputBox);
+
+                        // 自动聚焦
+                        inputBox.focus();
+                        inputBox.select();
+
+                        // 添加回车键监听
+                        inputBox.addEventListener('keydown', function (event) {
+                            if (event.key === 'Enter') {
+                                createNewProgram(inputBox.value, wrapper, programSelect);
+                            } else if (event.key === 'Escape') {
+                                // 取消创建
+                                cancelNewProgram(wrapper, programSelect);
+                            }
+                        });
+
+                        // 添加失焦监听
+                        inputBox.addEventListener('blur', function () {
+                            createNewProgram(inputBox.value, wrapper, programSelect);
+                        });
+
+                        // 添加输入验证
+                        inputBox.addEventListener('input', function () {
+                            // 移除可能存在的错误提示
+                            const errorMsg = wrapper.querySelector('.error-message');
+                            if (errorMsg) {
+                                errorMsg.remove();
+                            }
+
+                            // 只允许大小写字母、数字和下划线
+                            const isValid = /^[a-zA-Z0-9_]*$/.test(inputBox.value);
+                            if (!isValid && inputBox.value !== '') {
+                                inputBox.classList.add('error');
+                            } else {
+                                inputBox.classList.remove('error');
+
+                                // 检查是否重名
+                                if (inputBox.value !== '') {
+                                    const existingOptions = Array.from(programSelect.options).filter(opt => opt.value !== 'new' && opt.value === inputBox.value);
+                                    if (existingOptions.length > 0) {
+                                        inputBox.classList.add('error');
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
+            // 创建新程序
+            function createNewProgram(filename, wrapper, select) {
+                // 移除可能存在的错误提示
+                const errorMsg = wrapper.querySelector('.error-message');
+                if (errorMsg) {
+                    errorMsg.remove();
+                }
+
+                if (filename === '') {
+                    cancelNewProgram(wrapper, select);
+                    return;
+                }
+
+                // 验证文件名格式
+                if (!/^[a-zA-Z0-9_]+$/.test(filename)) {
+                    // 显示错误提示
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'error-message';
+                    errorMsg.textContent = '使用字母、数字和下划线';
+                    errorMsg.style.color = '#f44336';
+                    errorMsg.style.fontSize = '0.8em';
+                    errorMsg.style.marginTop = '4px';
+                    wrapper.appendChild(errorMsg);
+
+                    // 重新聚焦并选中
+                    inputBox.focus();
+                    inputBox.select();
+                    return;
+                }
+
+                // 检查是否已存在同名程序
+                const existingOptions = Array.from(select.options).filter(opt => opt.value !== 'new' && opt.value === filename);
+                if (existingOptions.length > 0) {
+                    // 显示错误提示
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'error-message';
+                    errorMsg.textContent = '程序名称已存在';
+                    errorMsg.style.color = '#f44336';
+                    errorMsg.style.fontSize = '0.8em';
+                    errorMsg.style.marginTop = '4px';
+                    wrapper.appendChild(errorMsg);
+
+                    // 重新聚焦并选中
+                    inputBox.focus();
+                    inputBox.select();
+
+                    return;
+                }
+
+                // 创建新选项并添加到select中
+                const option = document.createElement('option');
+                option.value = filename;
+                option.textContent = filename;
+                select.insertBefore(option, select.lastElementChild);
+                select.value = filename;
+
+                // 清理临时元素
+                wrapper.remove();
+                select.style.display = 'block';
+
+                // 清空工作区
+                const workspace = Blockly.getMainWorkspace();
+                workspace.clear();
+            }
+
+            // 取消创建新程序
+            function cancelNewProgram(wrapper, select) {
+                // 恢复原来的select
+                select.style.display = 'block';
+
+                // 移除临时元素
+                wrapper.remove();
+
+                // 恢复默认选择
+                select.value = select.options[0].value;
+            }
+        });
+
+    </script>
+    <script type="text/javascript">
+        function RunProgram() {
+            const programSelect = document.getElementById('programSelect');
+            const selectedProgram = programSelect.value;
+            
+            // 如果选择的是"新建..."，则提示用户先选择一个程序
+            if (selectedProgram === 'new' || selectedProgram === '') {
+                alert('请先选择一个程序');
+                return;
+            }
+            
+            // 创建GET请求
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', './api/progrun?name=' + encodeURIComponent(selectedProgram), true);
+            
+            // 设置请求完成后的回调函数
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status != 200) {
+                        alert('程序运行失败: ' + (xhr.responseText || 'API操作发生未知错误'));
+                    }
+                }
+            };
+            // 先保存当前程序
+            Save();
+            // 发送请求
+            xhr.send();
+        }
+    </script>
+    <script type="text/javascript">
+        // 页面加载完成后隐藏加载遮罩
+        window.addEventListener('load', function() {
+            // 确保所有资源都已加载
+            setTimeout(function() {
+                const loadingOverlay = document.getElementById('loading-overlay');
+                if (loadingOverlay) {
+                    loadingOverlay.style.display = 'none';
+                }
+            }, 500); // 额外等待500毫秒确保所有资源加载完成
+        });
     </script>
 </head>
 
 <body>
+    <!-- 加载遮罩 -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">正在加载编辑器...</div>
+    </div>
+    
     <div class="toolbar">
         <div class="toolbar-left">TestbenchPLC 流程编辑器</div>
         <div class="toolbar-center">
-            <select>
-                <option value="option1">默认程序</option>
+            <select id="programSelect">
+                <option value="default">default</option>
+                <option value="new">新建...</option>
             </select>
         </div>
         <div class="toolbar-right">
-            <button title="删除"><span class="mdi mdi-delete"></span></button>
-            <button title="保存"><span class="mdi mdi-content-save"></span></button>
-            <button title="导出" onclick="Download();"><span class="mdi mdi-download"></span></button>
-            <button title="运行"><span class="mdi mdi-play-circle"></span></button>
+            <button title="删除" onclick="DeleteProgram();"><span class="mdi mdi-delete"></span></button>
+            <button title="保存" onclick="Save();"><span class="mdi mdi-content-save"></span></button>
+            <button title="导出" onclick="Download();"><span class="mdi mdi-file-export"></span></button>
+            <button title="导入" onclick="Import();"><span class="mdi mdi-file-upload"></span></button>
+            <button title="运行" onclick="RunProgram();"><span class="mdi mdi-play-circle"></span></button>
         </div>
     </div>
     <div class="main-content" id="mainContent">

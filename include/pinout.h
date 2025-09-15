@@ -33,5 +33,4 @@
 #define PIN_TFT_RS          40
 #define PIN_TFT_CLK         41
 #define PIN_TFT_MOSI        42
-
 #endif

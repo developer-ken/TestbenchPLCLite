@@ -11,5 +11,6 @@
 
 void lvsetup();
 void lvloop();
+void lvproglistupdate();
 
 #endif
