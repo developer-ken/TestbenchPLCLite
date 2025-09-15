@@ -189,44 +189,44 @@ void WifiEnable()
             if (!webServer.hasArg("name")) {
                 webServer.send(400, "application/json", "{\"error\":\"Missing name parameter\"}");
                 return;
-
-        lvproglistupdate();
-    }
-    
-    // 获取文件名并确保以.tbp结尾
-    String filename = webServer.arg("name");
-    if (!filename.endsWith(".tbp")) {
-        filename += ".tbp";
-    }
-    
-    // 检查请求体是否有数据
-    if (webServer.hasArg("plain") == false) {
-        webServer.send(400, "application/json", "{\"error\":\"No content received\"}");
-        return;
-    }
-    
-    // 获取POST数据
-    String content = webServer.arg("plain");
-    
-    // 尝试打开文件进行写入
-    File file = SD.open("/" + filename, FILE_WRITE);
-    if (!file) {
-        webServer.send(500, "application/json", "{\"error\":\"Failed to create file\"}");
-        return;
-    }
-    
-    // 写入内容
-    size_t bytesWritten = file.print(content);
-    file.close();
-    
-    // 检查是否全部写入成功
-    if (bytesWritten != content.length()) {
-        webServer.send(500, "application/json", "{\"error\":\"Failed to write complete content\"}");
-        return;
-    }
-    
-    // 返回成功响应
-    webServer.send(200, "application/json", "{\"status\":\"success\"}"); });
+            }
+            
+            // 获取文件名并确保以.tbp结尾
+            String filename = webServer.arg("name");
+            if (!filename.endsWith(".tbp")) {
+                filename += ".tbp";
+            }
+            
+            // 检查请求体是否有数据
+            if (webServer.hasArg("plain") == false) {
+                webServer.send(400, "application/json", "{\"error\":\"No content received\"}");
+                return;
+            }
+            
+            // 获取POST数据
+            String content = webServer.arg("plain");
+            
+            // 尝试打开文件进行写入
+            File file = SD.open("/" + filename, FILE_WRITE);
+            if (!file) {
+                webServer.send(500, "application/json", "{\"error\":\"Failed to create file\"}");
+                return;
+            }
+            
+            // 写入内容
+            size_t bytesWritten = file.print(content);
+            file.close();
+            
+            // 检查是否全部写入成功
+            if (bytesWritten != content.length()) {
+                webServer.send(500, "application/json", "{\"error\":\"Failed to write complete content\"}");
+                return;
+            }
+            
+            // 返回成功响应
+            webServer.send(200, "application/json", "{\"status\":\"success\"}"); 
+        
+            lvproglistupdate(); });
     }
 
     // 删除程序API
@@ -306,7 +306,7 @@ void WifiEnable()
             }
         } else {
             // 如果文件不存在，重定向到editor.html
-            webServer.sendHeader("Location", "/editor.html");
+            webServer.sendHeader("Location", "http://192.168.45.1/editor.html");
             webServer.send(302, "text/plain", "Redirecting to editor.html");
         } });
     enabled = true;

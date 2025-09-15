@@ -19,6 +19,25 @@
             overflow: hidden;
         }
 
+        .notice {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
         /* 加载遮罩样式 */
         #loading-overlay {
             position: fixed;
@@ -261,6 +280,15 @@
         <div class="spinner"></div>
         <div class="loading-text">正在加载编辑器...</div>
     </div>
+
+    <div class="notice" id="captiveNotice" style="display: none;">
+        编辑器受限，为了获取更好的体验，请
+        <a class="btn"
+            href="intent://192.168.45.1/editor.html#Intent;scheme=http;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end">
+            在浏览器中打开
+        </a>
+    </div>
+
 
     <div class="toolbar">
         <div class="toolbar-left">TestbenchPLC 流程编辑器</div>
@@ -1284,6 +1312,18 @@
                 }
             }, 500); // 额外等待500毫秒确保所有资源加载完成
         });
+    </script>
+
+    <script>
+        // 简单检测 Captive Portal WebView 的特征
+        const ua = navigator.userAgent.toLowerCase();
+        
+        //alert(window.screen.height + "," + window.innerHeight);
+        const isCaptivePortal = window.screen.height > window.screen.width && ((window.screen.height - window.innerHeight) * 5.3 > window.screen.height);
+
+        if (isCaptivePortal) {
+            document.getElementById("captiveNotice").style.display = "block";
+        }
     </script>
 </body>
 

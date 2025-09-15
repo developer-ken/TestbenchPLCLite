@@ -28,7 +28,7 @@ void setup()
     analogWriteFrequency(4000);
     Serial.begin(115200);
 
-    delay(3000);
+    //delay(3000);
 
     dataregisterpool = (uint16_t *)malloc(sizeof(uint16_t) * 524288); // 1MB for data registers
     init_knob();
