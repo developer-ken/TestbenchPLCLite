@@ -147,7 +147,6 @@ void lvloop()
         lv_obj_remove_flag(guider_ui.screen_powerloss, LV_OBJ_FLAG_HIDDEN);
         digitalWrite(PIN_LEDPWR, HIGH);
         analogWrite(PIN_TFT_BL, 10);
-        SaveConfig();
         powerfailtime = millis();
         powerloss = true;
     }
@@ -164,6 +163,10 @@ void lvloop()
         {
             analogWrite(PIN_TFT_BL, 0);
             digitalWrite(PIN_LEDPWR, HIGH);
+
+            SaveConfig();
+
+            SD.end();
 
             // TODO: Execution engine - Save current state here
 

@@ -61,5 +61,6 @@ void SaveConfig()
 {
     File f = SD.open("/config.bin", FILE_WRITE);
     f.write((uint8_t *)&config, sizeof(config));
+    f.flush();
     f.close();
 }
