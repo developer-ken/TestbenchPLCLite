@@ -193,7 +193,7 @@ void lvproglistupdate()
                 {
                     response += "\n";
                 }
-                response += "\"" + fname.substring(0, fname.length() - 4) + "\"";
+                response += fname.substring(0, fname.length() - 4);
                 first = false;
             }
             file = root.openNextFile();
