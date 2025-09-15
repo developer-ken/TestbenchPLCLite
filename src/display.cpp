@@ -158,19 +158,19 @@ void lvsetup()
     lvproglistupdate();
     WifiStateUpdate();
     lv_timer_handler();
-    digitalWrite(PIN_TFT_BL, HIGH); // 打开背光
+    analogWrite(PIN_TFT_BL, 255); // 打开背光
 }
 
 void lvloop()
 {
     int d = digitalRead(PIN_BROWNOUT);
     static uint32_t powerfailtime = millis();
+    static uint32_t dimmtime = millis();
     if (!powerloss && !d)
     {
         // Brownout detected
         lv_obj_remove_flag(guider_ui.screen_powerloss, LV_OBJ_FLAG_HIDDEN);
         digitalWrite(PIN_LEDPWR, HIGH);
-        analogWrite(PIN_TFT_BL, 10);
         powerfailtime = millis();
         powerloss = true;
     }
@@ -183,7 +183,8 @@ void lvloop()
     }
     if (powerloss)
     {
-        if (millis() - powerfailtime > 5000)
+        uint32_t dt = millis() - powerfailtime;
+        if (dt > 5000)
         {
             analogWrite(PIN_TFT_BL, 0);
             digitalWrite(PIN_LEDPWR, HIGH);
@@ -197,6 +198,11 @@ void lvloop()
             esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_BROWNOUT, 1);
             esp_deep_sleep_start();
             // 进入深度睡眠后不会执行后续代码
+        }
+        if (millis() - dimmtime > 50)
+        {
+            dimmtime = millis();
+            analogWrite(PIN_TFT_BL, 255 - ((millis() - powerfailtime) * 255 / 5000));
         }
     }
     lv_timer_handler(); /* let the GUI do its work */
