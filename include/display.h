@@ -9,6 +9,16 @@
 #define TFT_ROTATION  LV_DISPLAY_ROTATION_0
 #define DRAW_BUF_SIZE (TFT_HOR_RES * TFT_VER_RES  * (LV_COLOR_DEPTH / 8))
 
+struct GConfig
+{
+    bool NonVolatile,
+        AutoBoot,
+        StateRecover,
+        Wifi;
+
+    char SelectedProgram[64];
+};
+
 void lvsetup();
 void lvloop();
 void lvproglistupdate();

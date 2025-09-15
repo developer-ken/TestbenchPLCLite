@@ -9,15 +9,7 @@
 
 uint16_t *dataregisterpool;
 
-struct
-{
-    bool NonVolatile,
-         AutoBoot,
-         StateRecover,
-         Wifi;
-
-    char SelectedProgram[64];
-} config = {false, false, false, false, ""};
+GConfig config = {false, false, false, false, ""};
 
 void setup()
 {

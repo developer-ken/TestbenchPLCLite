@@ -21,15 +21,7 @@ bool powerloss = false;
 
 lv_ui guider_ui;
 
-extern struct
-{
-    bool NonVolatile,
-        AutoBoot,
-        StateRecover,
-        Wifi;
-
-    char SelectedProgram[64];
-} config;
+extern struct GConfig config;
 
 void SaveConfig();
 
