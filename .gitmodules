@@ -1,0 +1,6 @@
+[submodule "lib/ArduinoStreamUtils"]
+	path = lib/ArduinoStreamUtils
+	url = https://github.com/bblanchon/ArduinoStreamUtils.git
+[submodule "lib/BlockyExecutionHandler"]
+	path = lib/BlockyExecutionHandler
+	url = https://github.com/developer-ken/BlockyExecutionHandler.git
