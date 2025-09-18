@@ -24,6 +24,8 @@ lv_ui guider_ui;
 extern struct GConfig config;
 
 void SaveConfig();
+void TryRunSelected();
+void RunStateSwitch();
 
 /* LVGL calls it when a rendered image needs to copied to the display*/
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
@@ -135,7 +137,7 @@ void lvsetup()
                         { config.Wifi = lv_obj_has_state(guider_ui.screen_wireless, LV_STATE_CHECKED); }, LV_EVENT_VALUE_CHANGED, NULL);
 
     lv_obj_add_event_cb(guider_ui.screen_run, [](lv_event_t *e)
-                        { config.Running = lv_obj_has_state(guider_ui.screen_run, LV_STATE_CHECKED); }, LV_EVENT_VALUE_CHANGED, NULL);
+                        { config.Running = lv_obj_has_state(guider_ui.screen_run, LV_STATE_CHECKED); RunStateSwitch(); }, LV_EVENT_VALUE_CHANGED, NULL);
 
     lv_obj_add_event_cb(guider_ui.screen_fileselect, [](lv_event_t *e)
                         { config.SelectedProgramIndex = lv_roller_get_selected(guider_ui.screen_fileselect); }, LV_EVENT_VALUE_CHANGED, NULL);
@@ -146,6 +148,8 @@ void lvsetup()
     lv_obj_set_state(guider_ui.screen_staterecover, LV_STATE_CHECKED, config.StateRecover);
     lv_obj_set_state(guider_ui.screen_wireless, LV_STATE_CHECKED, config.Wifi);
 
+    lvproglistupdate();
+
     if (config.SelectedProgramIndex < lv_roller_get_option_count(guider_ui.screen_fileselect))
     {
         lv_roller_set_selected(guider_ui.screen_fileselect, config.SelectedProgramIndex, LV_ANIM_OFF);
@@ -155,8 +159,13 @@ void lvsetup()
         }
     }
 
-    lvproglistupdate();
     WifiStateUpdate();
+
+    if (config.AutoBoot)
+    {
+        TryRunSelected();
+    }
+
     lv_timer_handler();
     analogWrite(PIN_TFT_BL, 255); // 打开背光
 }
@@ -234,4 +243,41 @@ void lvproglistupdate()
         root.close();
     }
     lv_roller_set_options(guider_ui.screen_fileselect, response.c_str(), LV_ROLLER_MODE_INFINITE);
+}
+
+void TryRunSelected()
+{
+    char selbuf[64];
+    lv_roller_get_selected_str(guider_ui.screen_fileselect, selbuf, sizeof(selbuf));
+    if (SD.exists(selbuf))
+    {
+        // 创建新任务执行选中的代码，防止阻塞，优先级为5
+        xTaskCreate(
+            [](void *param)
+            {
+                char *filename = (char *)param;
+                RunFile(filename);
+                vTaskDelete(NULL); // 任务完成后自动删除
+            },
+            "runfile_task",
+            2048,
+            strdup(selbuf), // 复制文件名作为参数
+            5,
+            NULL);
+    }
+}
+
+void RunStateSwitch()
+{
+    if (config.Running)
+    {
+        Reset();
+        TryRunSelected();
+        lv_obj_add_state(guider_ui.screen_fileselect, LV_STATE_DISABLED);
+    }
+    else
+    {
+        Reset();
+        lv_obj_remove_state(guider_ui.screen_fileselect, LV_STATE_DISABLED);
+    }
 }
