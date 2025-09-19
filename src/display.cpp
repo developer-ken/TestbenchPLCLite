@@ -15,7 +15,6 @@ Arduino_DataBus *bus = new Arduino_ESP32SPIDMA(PIN_TFT_RS, PIN_TFT_CS, PIN_TFT_C
 Arduino_GFX *gfx = new Arduino_ST7789(bus, PIN_TFT_RST, 0, true, TFT_VER_RES, TFT_HOR_RES, 0, 40, 53, 0);
 
 uint32_t draw_bufA[DRAW_BUF_SIZE / 4];
-uint32_t draw_bufB[DRAW_BUF_SIZE / 4];
 
 bool powerloss = false;
 
@@ -100,7 +99,7 @@ void lvsetup()
     lv_display_t *disp;
     disp = lv_display_create(TFT_HOR_RES, TFT_VER_RES);
     lv_display_set_flush_cb(disp, my_disp_flush);
-    lv_display_set_buffers(disp, draw_bufA, draw_bufB, sizeof(draw_bufA), LV_DISPLAY_RENDER_MODE_FULL);
+    lv_display_set_buffers(disp, draw_bufA, NULL, sizeof(draw_bufA), LV_DISPLAY_RENDER_MODE_PARTIAL);
 
     lv_indev_t *knob = lv_indev_create();
     lv_indev_set_type(knob, LV_INDEV_TYPE_ENCODER);
@@ -247,24 +246,19 @@ void lvproglistupdate()
 
 void TryRunSelected()
 {
+    log_i("Try run selected");
     char selbuf[64];
     lv_roller_get_selected_str(guider_ui.screen_fileselect, selbuf, sizeof(selbuf));
+    strcpy(selbuf + 1, strdup(selbuf)); // 绝对路径
+    selbuf[0] = '/';
+    strcpy(selbuf + strlen(selbuf), ".tbp"); // 增加后缀
+    log_i("Target:%s", selbuf);
     if (SD.exists(selbuf))
     {
-        // 创建新任务执行选中的代码，防止阻塞，优先级为5
-        xTaskCreate(
-            [](void *param)
-            {
-                char *filename = (char *)param;
-                RunFile(filename);
-                vTaskDelete(NULL); // 任务完成后自动删除
-            },
-            "runfile_task",
-            2048,
-            strdup(selbuf), // 复制文件名作为参数
-            5,
-            NULL);
+        RunFileAsync(selbuf);
     }
+    else
+        log_i("Non exists");
 }
 
 void RunStateSwitch()
@@ -279,5 +273,6 @@ void RunStateSwitch()
     {
         Reset();
         lv_obj_remove_state(guider_ui.screen_fileselect, LV_STATE_DISABLED);
+        lvproglistupdate();
     }
 }

@@ -2,7 +2,8 @@
 #define _DEFS_H_
 #include <WString.h>
 
-int RunFile(String);
+void execRegExtraHandlers();
+void RunFileAsync(String);
 void Trigger(String);
 void Reset();
 
