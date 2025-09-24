@@ -15,7 +15,6 @@ Arduino_DataBus *bus = new Arduino_ESP32SPIDMA(PIN_TFT_RS, PIN_TFT_CS, PIN_TFT_C
 Arduino_GFX *gfx = new Arduino_ST7789(bus, PIN_TFT_RST, 0, true, TFT_VER_RES, TFT_HOR_RES, 0, 40, 53, 0);
 
 uint32_t draw_bufA[DRAW_BUF_SIZE / 4];
-uint32_t draw_bufB[DRAW_BUF_SIZE / 4];
 
 bool powerloss = false;
 
@@ -24,6 +23,8 @@ lv_ui guider_ui;
 extern struct GConfig config;
 
 void SaveConfig();
+void TryRunSelected();
+void RunStateSwitch();
 
 /* LVGL calls it when a rendered image needs to copied to the display*/
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
@@ -98,7 +99,7 @@ void lvsetup()
     lv_display_t *disp;
     disp = lv_display_create(TFT_HOR_RES, TFT_VER_RES);
     lv_display_set_flush_cb(disp, my_disp_flush);
-    lv_display_set_buffers(disp, draw_bufA, draw_bufB, sizeof(draw_bufA), LV_DISPLAY_RENDER_MODE_FULL);
+    lv_display_set_buffers(disp, draw_bufA, NULL, sizeof(draw_bufA), LV_DISPLAY_RENDER_MODE_PARTIAL);
 
     lv_indev_t *knob = lv_indev_create();
     lv_indev_set_type(knob, LV_INDEV_TYPE_ENCODER);
@@ -135,7 +136,7 @@ void lvsetup()
                         { config.Wifi = lv_obj_has_state(guider_ui.screen_wireless, LV_STATE_CHECKED); }, LV_EVENT_VALUE_CHANGED, NULL);
 
     lv_obj_add_event_cb(guider_ui.screen_run, [](lv_event_t *e)
-                        { config.Running = lv_obj_has_state(guider_ui.screen_run, LV_STATE_CHECKED); }, LV_EVENT_VALUE_CHANGED, NULL);
+                        { config.Running = lv_obj_has_state(guider_ui.screen_run, LV_STATE_CHECKED); RunStateSwitch(); }, LV_EVENT_VALUE_CHANGED, NULL);
 
     lv_obj_add_event_cb(guider_ui.screen_fileselect, [](lv_event_t *e)
                         { config.SelectedProgramIndex = lv_roller_get_selected(guider_ui.screen_fileselect); }, LV_EVENT_VALUE_CHANGED, NULL);
@@ -146,6 +147,8 @@ void lvsetup()
     lv_obj_set_state(guider_ui.screen_staterecover, LV_STATE_CHECKED, config.StateRecover);
     lv_obj_set_state(guider_ui.screen_wireless, LV_STATE_CHECKED, config.Wifi);
 
+    lvproglistupdate();
+
     if (config.SelectedProgramIndex < lv_roller_get_option_count(guider_ui.screen_fileselect))
     {
         lv_roller_set_selected(guider_ui.screen_fileselect, config.SelectedProgramIndex, LV_ANIM_OFF);
@@ -155,8 +158,13 @@ void lvsetup()
         }
     }
 
-    lvproglistupdate();
     WifiStateUpdate();
+
+    if (config.AutoBoot)
+    {
+        TryRunSelected();
+    }
+
     lv_timer_handler();
     analogWrite(PIN_TFT_BL, 255); // 打开背光
 }
@@ -234,4 +242,37 @@ void lvproglistupdate()
         root.close();
     }
     lv_roller_set_options(guider_ui.screen_fileselect, response.c_str(), LV_ROLLER_MODE_INFINITE);
+}
+
+void TryRunSelected()
+{
+    log_i("Try run selected");
+    char selbuf[64];
+    lv_roller_get_selected_str(guider_ui.screen_fileselect, selbuf, sizeof(selbuf));
+    strcpy(selbuf + 1, strdup(selbuf)); // 绝对路径
+    selbuf[0] = '/';
+    strcpy(selbuf + strlen(selbuf), ".tbp"); // 增加后缀
+    log_i("Target:%s", selbuf);
+    if (SD.exists(selbuf))
+    {
+        RunFileAsync(selbuf);
+    }
+    else
+        log_i("Non exists");
+}
+
+void RunStateSwitch()
+{
+    if (config.Running)
+    {
+        Reset();
+        TryRunSelected();
+        lv_obj_add_state(guider_ui.screen_fileselect, LV_STATE_DISABLED);
+    }
+    else
+    {
+        Reset();
+        lv_obj_remove_state(guider_ui.screen_fileselect, LV_STATE_DISABLED);
+        lvproglistupdate();
+    }
 }

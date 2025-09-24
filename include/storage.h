@@ -5,7 +5,4 @@
 #include <SD.h>
 #include <FS.h>
 
-void storage_setup();
-extern FS sdcard;
-
 #endif

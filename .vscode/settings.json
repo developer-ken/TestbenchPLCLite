@@ -16,7 +16,8 @@
         "deque": "cpp",
         "unordered_map": "cpp",
         "unordered_set": "cpp",
-        "string_view": "cpp"
+        "string_view": "cpp",
+        "cmath": "cpp"
     },
     "Codegeex.RepoIndex": true
 }

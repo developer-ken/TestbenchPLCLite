@@ -5,6 +5,7 @@
 #include <WebServer.h>
 #include <FS.h>
 #include <LittleFS.h>
+#include "defs.h"
 
 extern String ssid;
 extern String password;

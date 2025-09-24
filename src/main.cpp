@@ -28,12 +28,20 @@ void setup()
     analogWriteFrequency(4000);
     Serial.begin(115200);
 
-    //delay(3000);
+    // delay(3000);
 
     dataregisterpool = (uint16_t *)malloc(sizeof(uint16_t) * 524288); // 1MB for data registers
     init_knob();
-    storage_setup();
+
+    SPI.begin(PIN_SDCLK, PIN_SDMISO, PIN_SDMOSI);
+    while (!SD.begin(PIN_SDCS, SPI, 40000000, "/sd", 5U, true))
+    {
+        log_e("Card Mount Failed");
+        vTaskDelay(500);
+    }
+
     webserver_setup();
+
     if (SD.exists("/config.bin"))
     {
         // Load config
@@ -46,6 +54,8 @@ void setup()
         log_i("CONF_AutoBoot: %d", config.AutoBoot);
         log_i("CONF_Wifi: %d", config.Wifi);
     }
+
+    execRegExtraHandlers();
 
     lvsetup();
 }
