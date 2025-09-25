@@ -149,24 +149,22 @@ void lvsetup()
 
     lvproglistupdate();
 
+    config.Running &= config.AutoBoot;
+
     if (config.SelectedProgramIndex < lv_roller_get_option_count(guider_ui.screen_fileselect))
     {
         lv_roller_set_selected(guider_ui.screen_fileselect, config.SelectedProgramIndex, LV_ANIM_OFF);
-        if (config.AutoBoot)
+        if (config.Running)
         {
-            lv_obj_set_state(guider_ui.screen_run, LV_STATE_CHECKED, config.Running);
+            lv_obj_set_state(guider_ui.screen_run, LV_STATE_CHECKED, true);
         }
     }
 
     WifiStateUpdate();
 
-    if (config.AutoBoot)
-    {
-        TryRunSelected();
-    }
-
     lv_timer_handler();
     analogWrite(PIN_TFT_BL, 255); // 打开背光
+    RunStateSwitch();
 }
 
 void lvloop()
@@ -273,6 +271,6 @@ void RunStateSwitch()
     {
         Reset();
         lv_obj_remove_state(guider_ui.screen_fileselect, LV_STATE_DISABLED);
-        lvproglistupdate();
+        // lvproglistupdate();
     }
 }
