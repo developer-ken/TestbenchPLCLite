@@ -17,6 +17,12 @@ void setup()
     pinMode(PIN_LEDPWR, OUTPUT);
     pinMode(PIN_LEDHB, OUTPUT);
     pinMode(PIN_BEEP, OUTPUT);
+
+    pinMode(PIN_DO1, OUTPUT);
+    pinMode(PIN_DO2, OUTPUT);
+    pinMode(PIN_DO3, OUTPUT);
+    pinMode(PIN_DO4, OUTPUT);
+
     digitalWrite(PIN_LEDHB, HIGH);
     digitalWrite(PIN_LEDPWR, LOW);
     while (digitalRead(PIN_BROWNOUT) == LOW)

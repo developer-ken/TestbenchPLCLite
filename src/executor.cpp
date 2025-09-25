@@ -5,13 +5,86 @@
 #include <StreamUtils.h>
 #include "display.h"
 #include "defs.h"
+#include "pinout.h"
 
 BlocklyInterpreter blockly;
 JsonDocument _json;
 
+// IO_OUT
+int _A_IO_OUT(JsonObject jb, BlocklyInterpreter *b)
+{
+    char pinid = jb["fields"]["ID"].as<const char *>()[2];
+    int value = b->eval(jb["inputs"]["VALUE"]);
+    switch (pinid)
+    {
+    case '1':
+        digitalWrite(PIN_DO1, value ? HIGH : LOW);
+        break;
+    case '2':
+        digitalWrite(PIN_DO2, value ? HIGH : LOW);
+        break;
+    case '3':
+        digitalWrite(PIN_DO3, value ? HIGH : LOW);
+        break;
+    case '4':
+        digitalWrite(PIN_DO4, value ? HIGH : LOW);
+        break;
+    default:
+        return false;
+    }
+    return true;
+}
+
+// DI_IN
+int _V_DI_IN(JsonObject jb, BlocklyInterpreter *b)
+{
+    char pinid = jb["fields"]["ID"].as<const char *>()[2];
+    switch (pinid)
+    {
+    case '1':
+        return digitalRead(PIN_DI1) == HIGH ? 1 : 0;
+    case '2':
+        return digitalRead(PIN_DI2) == HIGH ? 1 : 0;
+    case '3':
+        return digitalRead(PIN_DI3) == HIGH ? 1 : 0;
+    case '4':
+        return digitalRead(PIN_DI4) == HIGH ? 1 : 0;
+    default:
+        return 0;
+    }
+}
+
+// AI_IN
+int _V_AI_IN(JsonObject jb, BlocklyInterpreter *b)
+{
+    char pinid = jb["fields"]["ID"].as<const char *>()[2];
+    switch (pinid)
+    {
+    case '1':
+        return analogRead(PIN_AI1);
+    case '2':
+        return analogRead(PIN_AI2);
+    default:
+        return 0;
+    }
+}
+
+// CTRL_DELAY
+int _A_CTRL_DELAY(JsonObject jb, BlocklyInterpreter *b)
+{
+    int ms = b->eval(jb["inputs"]["NAME"]);
+    for (int i = 0; (i < ms && !b->_flag_stop); i++)
+        delay(1);
+    return true;
+}
+
 void execRegExtraHandlers()
 {
-    blockly.registerHandler("EVENT_PWRON", _E_COMMON_NOP); // 注册默认事件
+    blockly.registerHandler("EVENT_PWRON", _E_COMMON_NOP);
+    blockly.registerHandler("IO_OUT", _A_IO_OUT);
+    blockly.registerHandler("DI_IN", _V_DI_IN);
+    blockly.registerHandler("AI_IN", _V_AI_IN);
+    blockly.registerHandler("CTRL_DELAY", _A_CTRL_DELAY);
 }
 
 void RunFileAsync(String filename)
@@ -31,7 +104,7 @@ void RunFileAsync(String filename)
         }
         ReadBufferingStream bufferedFile{file, 64};
         log_i("start deserilize...");
-        DeserializationError error = deserializeJson(_json, bufferedFile, DeserializationOption::NestingLimit(20));
+        DeserializationError error = deserializeJson(_json, bufferedFile, DeserializationOption::NestingLimit(100));
         file.close();
         if (error)
         {
@@ -70,6 +143,11 @@ void Reset()
     }
     RegisterDefaultHandlers(&blockly);
     execRegExtraHandlers();
+
+    digitalWrite(PIN_DO1, LOW);
+    digitalWrite(PIN_DO2, LOW);
+    digitalWrite(PIN_DO3, LOW);
+    digitalWrite(PIN_DO4, LOW);
 }
 
 void Trigger(String name)
