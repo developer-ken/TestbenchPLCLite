@@ -17,7 +17,8 @@
         "unordered_map": "cpp",
         "unordered_set": "cpp",
         "string_view": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "spiram.h": "c"
     },
     "Codegeex.RepoIndex": true
 }

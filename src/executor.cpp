@@ -73,8 +73,9 @@ int _V_AI_IN(JsonObject jb, BlocklyInterpreter *b)
 int _A_CTRL_DELAY(JsonObject jb, BlocklyInterpreter *b)
 {
     int ms = b->eval(jb["inputs"]["NAME"]);
-    for (int i = 0; (i < ms && !b->_flag_stop); i++)
-        delay(1);
+    uint32_t target = millis() + ms;
+    while (!b->_flag_stop && millis() < target)
+        taskYIELD();
     return true;
 }
 
@@ -113,7 +114,7 @@ void RunFileAsync(String filename)
         }
         log_i("Creating new task...");
         // 创建新任务执行选中的代码，防止阻塞，优先级为5
-        xTaskCreate(
+        xTaskCreatePinnedToCore(
             [](void *param)
             {
                 blockly.exec(_json.as<JsonObject>());
@@ -124,8 +125,9 @@ void RunFileAsync(String filename)
             "runfile_task",
             8192,
             NULL,
-            5,
-            NULL);
+            tskIDLE_PRIORITY,
+            NULL,
+            0);
     }
     else
     {
@@ -153,7 +155,7 @@ void Reset()
 void Trigger(String name)
 {
     // 创建一个新任务来执行选中的代码，防止阻塞，优先级为5
-    xTaskCreate(
+    xTaskCreatePinnedToCore(
         [](void *parameter)
         {
             String *name = static_cast<String *>(parameter);
@@ -164,6 +166,7 @@ void Trigger(String name)
         "TriggerTask",
         32768,            // 栈大小
         new String(name), // 传递参数
-        5,                // 优先级为5
-        NULL);
+        tskIDLE_PRIORITY, // 优先级为5
+        NULL,
+        0);
 }

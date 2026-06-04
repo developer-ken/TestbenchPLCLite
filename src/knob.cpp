@@ -18,7 +18,7 @@ void init_knob()
     pinMode(PIN_KNOB_B, INPUT);
     pinMode(PIN_KNOB_PRESS, INPUT);
     attachInterrupt(PIN_KNOB_A, knob_isr, CHANGE);
-    xTaskCreate(
+    xTaskCreatePinnedToCore(
         [](void *param)
         {
             for (;;)
@@ -28,7 +28,7 @@ void init_knob()
                     locknlock = false;
                     bool a = digitalRead(PIN_KNOB_A);
                     bool b = digitalRead(PIN_KNOB_B);
-                    //Serial.printf("A=%d B=%d r=%d\n", a, b, rotatestate);
+                    // Serial.printf("A=%d B=%d r=%d\n", a, b, rotatestate);
                     if (rotatestate == 0)
                     {
                         if (a == b)
@@ -64,5 +64,6 @@ void init_knob()
         2048,
         NULL,
         1,
-        NULL);
+        NULL,
+        ARDUINO_RUNNING_CORE);
 }
