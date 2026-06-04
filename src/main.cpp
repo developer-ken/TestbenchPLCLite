@@ -10,7 +10,9 @@ uint16_t *dataregisterpool;
 
 uint8_t errcount = 0, last = 1;
 uint32_t failtime[15];
+uint32_t failcounter[15];
 uint32_t secnow = 0;
+uint32_t counter = 0;
 bool should_be_on = false;
 
 extern Arduino_GFX *gfx;
@@ -85,6 +87,7 @@ void setup()
                         if(!should_be_on) return;
                         if(errcount <15){
                             failtime[errcount] = secnow;
+                            failcounter[errcount] = counter;
                         }
                         errcount++; }, RISING);
     xTaskCreate([](void *param)
@@ -100,7 +103,7 @@ void setup()
                             gfx->printf("ErrCount: %d\n", errcount);
                             for (int i = 0; i < errcount; i++)
                             {
-                                gfx->printf("Err%02d: %ds\n", i + 1, failtime[i]);
+                                gfx->printf("Err%02d: %d@%ds\n", i + 1, failcounter[i],failtime[i]);
                             }
                             digitalWrite(PIN_DO1, errcount>0 ? HIGH : LOW);
                     } },
@@ -125,6 +128,7 @@ void loop()
         if (errcount < 15)
         {
             failtime[errcount] = secnow;
+            failcounter[errcount] = counter;
         }
         errcount++;
     }
@@ -133,4 +137,5 @@ void loop()
     should_be_on = false;
     digitalWrite(PIN_DO2, LOW);
     vTaskDelay(10 * 1000); // delay 10sec
+    counter++;
 }
